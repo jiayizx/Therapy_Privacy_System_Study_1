@@ -56,13 +56,15 @@ def setup_mongodb():
 
 def load_environment_variables():
     """Load environment variables from the .env file."""
-    env_path = Path(".") / "secrets.env"
-    load_dotenv(dotenv_path=env_path)
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    # env_path = Path(".") / "secrets.env"
+    # load_dotenv(dotenv_path=env_path)
+    # openai_api_key = os.environ.get("OPENAI_API_KEY")
+    openai_api_key = st.secrets["openai_api_key"]
+    os.environ["OPENAI_API_KEY"] = openai_api_key
     if not openai_api_key:
         raise ValueError("OpenAI API key not found in environment variables. Please set the OPENAI_API_KEY environment variable.")
     secure_log_api_key(openai_api_key)
-
+    
 
 def ask_prolific_id():
     if "prolific_id_entered" not in st.session_state:
@@ -76,9 +78,10 @@ def ask_prolific_id():
         prolific_id = st.text_input("Prolific ID", type="default")
         st.session_state.prolific_id = prolific_id
         password = st.text_input("Website Password", type="password")
+        web_login_password = st.secrets["web_login_password"]
         if st.button("Submit"):
             if prolific_id:
-                if password == "12345":
+                if password == web_login_password:
                     st.session_state.prolific_id_entered = True
                     st.success("Prolific ID accepted! You can now proceed to the chat page.")
                     st.rerun()
@@ -294,7 +297,7 @@ def main():
     
     configure_streamlit()
     ask_prolific_id()
-    print(f"Prolific ID: {st.session_state.prolific_id}")
+    # print(f"Prolific ID: {st.session_state.prolific_id}")
     setup_logging()
     load_environment_variables()
     setup_mongodb()

@@ -1,0 +1,5 @@
+# Ignore the secrets.toml file in the webapp/.streamlit directory
+.streamlit/secrets.toml
+
+# Ignore all log files with .log extension
+*.log
