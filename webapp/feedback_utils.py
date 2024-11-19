@@ -39,37 +39,59 @@ def get_survey_sample(all_detections:dict, max_display:int = 10):
     return sampled_detections
 
 def disable_copy_paste():
-    # Inject custom JavaScript to prevent copy/paste
-    st.markdown("""
-        <script>
-        document.addEventListener('DOMContentLoaded', (event) => {
-            const preventDefaultAction = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            };
-            
-            // Select all textarea elements
-            const textareas = document.querySelectorAll('textarea');
-            textareas.forEach(textarea => {
-                textarea.addEventListener('copy', preventDefaultAction);
-                textarea.addEventListener('cut', preventDefaultAction);
-                textarea.addEventListener('paste', preventDefaultAction);
-                textarea.addEventListener('contextmenu', preventDefaultAction);
-            });
-        });
-        </script>
-        
+    # Inject both JavaScript and CSS using a single HTML component
+    st.components.v1.html("""
         <style>
-        textarea {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
+        * {
+                -webkit-user-select: none;  /* Disable text selection in Chrome, Safari, Opera */
+                -moz-user-select: none;     /* Disable text selection in Firefox */
+                -ms-user-select: none;      /* Disable text selection in Internet Explorer/Edge */
+                user-select: none;          /* Disable text selection in standard-compliant browsers */
+            }
+            body {
+                -webkit-touch-callout: none; /* Disable callouts in iOS Safari */
+            }
+            /* Disable text selection */
+            .stTextArea textarea {
+                user-select: none !important;
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+            }
         </style>
-    """, unsafe_allow_html=True)
-
+        
+        <script>
+            // Function to disable copy/paste events
+            function disableCopyPaste() {
+                const textareas = parent.document.querySelectorAll('.stTextArea textarea');
+                textareas.forEach(textarea => {
+                    textarea.addEventListener('copy', e => e.preventDefault());
+                    textarea.addEventListener('cut', e => e.preventDefault());
+                    textarea.addEventListener('paste', e => e.preventDefault());
+                    textarea.addEventListener('contextmenu', e => e.preventDefault());
+                    
+                    // Disable keyboard shortcuts
+                    textarea.addEventListener('keydown', e => {
+                        if ((e.ctrlKey || e.metaKey) && 
+                            (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+                            e.preventDefault();
+                        }
+                    });
+                });
+            }
+            
+            // Run immediately and also after a short delay to ensure elements are loaded
+            disableCopyPaste();
+            setTimeout(disableCopyPaste, 500);
+            
+            // Monitor for dynamic changes
+            const observer = new MutationObserver(disableCopyPaste);
+            observer.observe(parent.document.body, {
+                childList: true,
+                subtree: true
+            });
+        </script>
+    """, height=0)
 
 def get_survey_info():
     """
@@ -233,12 +255,16 @@ def get_user_selections():
 
     # Configuring the setup
     setup_survey_config()
+    disable_copy_paste()
 
     if not st.session_state.user_selections_fixed:
         # Display the survey information to the user for getting the user selections
         if survey_info == {}:
             st.write("No detection in the conversation.")
             st.session_state.disable_submit = False
+            st.session_state.user_selections_fixed = True
+            st.session_state.user_nec_reasons_entered = True
+            st.session_state.user_unnec_reasons_entered = True
         else:
             logging.info("Surveying user, waiting for user to complete selections.")
 
@@ -268,8 +294,7 @@ def get_user_selections():
 
     if st.session_state.user_selections_fixed and st.session_state.user_nec_reasons_entered and st.session_state.user_unnec_reasons_entered:
         display_submit_button()
-    
-    disable_copy_paste()
+
 
 def fix_user_selections():
     """
@@ -303,7 +328,8 @@ def get_necessary_reasoning():
     #     return
     
     if st.session_state.user_selections and not st.session_state.user_nec_reasons_entered:
-        st.subheader("Why you think following information is :blue[necessary] to share for the therapy session?")
+        st.write("Why you think following information is :blue[necessary] to share for the therapy session?",
+                 )
 
         for key in st.session_state.user_selections:
             col1, col2 = st.columns([4, 4])
@@ -317,7 +343,7 @@ def get_necessary_reasoning():
 
         validate_reasoning(prefix="reasoning", suffix="necessary", var_name="disable_necessary_reasons")
         st.button("Next", on_click=set_user_nec_reasoning, disabled=st.session_state.disable_necessary_reasons,
-                        help="Provide reasoning to proceed to next step.",
+                        help="Provide reasoning for :red[all with at-least 10 words] to proceed to next step.",
                         key="next_button")
     else:
         set_user_nec_reasoning()
@@ -359,7 +385,7 @@ def get_unnecessary_reasoning():
             st.session_state.disable_unnecessary_reasons = True
 
         if st.session_state.disable_unnecessary_reasons:
-            st.header("Why you think following information is :blue[unnecessary] to share for the therapy session, but you still share that with the chatbot?")
+            st.subheader("Why you think following information is :blue[unnecessary] to share for the therapy session, but you still share that with the chatbot?")
             # Display the options to the user for the selected options
             for key in st.session_state.user_non_selections:
                 col1, col2 = st.columns([4, 4])
@@ -377,7 +403,7 @@ def get_unnecessary_reasoning():
 
         validate_reasoning(prefix="reasoning", suffix="unnecessary", var_name="disable_unnecessary_reasons")
         st.button("Next", on_click=set_user_unnec_reasoning, disabled=st.session_state.disable_unnecessary_reasons,
-                        help="Proceed to the next step only after providing reason for :red[all].",)
+                        help="Provide reasoning for :red[all with at-least 10 words] to proceed to next step.")
     else:
         set_user_unnec_reasoning()
 
@@ -391,14 +417,15 @@ def display_submit_button():
     st.write("Succesfully completed Post Survey 2")
     if st.button("Part 3: Proceed to Post Survey 3", on_click=store_feedback,
                      disabled=st.session_state.disable_submit):
-            target_page = "pages/post_survey_3.py"
-            st.switch_page(target_page)
+        target_page = "pages/post_survey_3.py"
+        st.switch_page(target_page)
 
 
-def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary", var_name: str = "disable_submit",
-                       min_words: int = 10):
+def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary",
+                       var_name: str = "disable_submit", min_words: int = 10):
     """
-    This function validates all the reasoning provided by the user for the desired options and sets the var_name to True or False.
+    This function validates all the reasoning provided by the user for the desired options and 
+    sets the var_name to True or False.
     """
     regex = re.compile(r"[\s]{2,}")
     for key, value in st.session_state.items():
@@ -408,6 +435,7 @@ def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary", var
                 st.session_state[var_name] = True
                 return None
     st.session_state[var_name] = False
+    return None
 
 def store_feedback():
     """
