@@ -447,7 +447,7 @@ def store_feedback():
     # Store the feedback in Firebase Firestore
     try:
         # Reference to the collection
-        collection_ref = db.collection('part_one_survey_two_responses')
+        collection_ref = db.collection('group_one_survey_two_responses')
 
         # Create a unique document name using Prolific ID and timestamp
         document_name = f"{prolific_id}_{timestamp}"
