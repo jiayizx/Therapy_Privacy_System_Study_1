@@ -3,3 +3,7 @@
 
 # Ignore all log files with .log extension
 *.log
+
+# ignore csv files
+survey_one_responses.csv
+survey_two_responses.csv

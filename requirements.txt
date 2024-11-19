@@ -9,3 +9,4 @@ gymnasium
 torch
 pymongo[srv]
 boto3
+streamlit-survey

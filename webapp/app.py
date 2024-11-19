@@ -24,8 +24,7 @@ from therapy_utils import (
     read_unnecessary_info_csv
 )
 from feedback_utils import (
-    get_user_selections, validate_reasoning, enable_feedback_submit,
-    reveal_next_options, store_human_feedback
+    get_user_selections, pre_survey, post_survey, read_posthoc_survey_info_csv
 )
 
 
@@ -103,6 +102,10 @@ def initialize_session_state():
         st.session_state.messages = []
     if "start_time" not in st.session_state:
         st.session_state.start_time = None
+    if 'chat_finished' not in st.session_state:
+        st.session_state.chat_finished = False
+    if "post_survey_options" not in st.session_state:
+        st.session_state.post_survey_options = False
 
 
 def start_conversation(agent_1, agent_2, therapist_system_prompt, persuasion_techique, init_message_flag,
@@ -290,14 +293,33 @@ def sidebar_seeking_help(persona_category_info):
                 st.write(info)
 
 
+def disable_copy_paste():
+    # Inject custom CSS to prevent text selection
+    st.markdown("""
+        <style>
+        * {
+            -webkit-user-select: none;  /* Disable text selection in Chrome, Safari, Opera */
+            -moz-user-select: none;     /* Disable text selection in Firefox */
+            -ms-user-select: none;      /* Disable text selection in Internet Explorer/Edge */
+            user-select: none;          /* Disable text selection in standard-compliant browsers */
+        }
+        body {
+            -webkit-touch-callout: none; /* Disable callouts in iOS Safari */
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+
 def main():
     """Main function to run the Streamlit app."""
     PERSONA_FILENAME = "persona_info_hierarchy.csv"
     UNN_INFO_FNAME = "unn_info.csv"
+    POSTHOC_SURVEY_INFO_FNAME = "posthoc_survey.csv"
     
     configure_streamlit()
     ask_prolific_id()
     # print(f"Prolific ID: {st.session_state.prolific_id}")
+    disable_copy_paste()
     setup_logging()
     load_environment_variables()
     setup_mongodb()
@@ -333,8 +355,8 @@ def main():
     sidebar_seeking_help(persona_category_info)
 
     start = st.button("Start Conversation")
-    if st.button("Clear Chat"):
-        clean_chat()
+    # if st.button("Clear Chat"):
+    #     clean_chat()
 
     if start:
         # Initialize conversation
@@ -360,11 +382,35 @@ def main():
         while st.session_state.current_iteration < st.session_state.iterations and elapsed_time < min_interaction_time:
             # Run conversation
             run_conversation(env, players, is_stream, persona_hierarchy_info, main_categories, persona_category_info)
+            
+            if st.session_state.current_iteration >= st.session_state.iterations or elapsed_time >= min_interaction_time:
+                if st.button("Terminate Chat"):
+                    st.success("Chat terminated. You can review the chat history.")
+                    break
 
-        # Collect user feedback
+        # # Collect user feedback
+        # # Get the pre survey only if the pre survey options are not displayed already
+        # if "pre_survey_options" not in st.session_state:
+        #     st.session_state.pre_survey_options = True
+
+        # # Placeholder for the pre-feedback survey
+        # if st.session_state.pre_survey_options:
+        #     st.session_state.pre_survey_options = False
+        #     pre_survey()
+
+        # # Get the user's feedback on the revealed detected private information
         # get_user_selections()
-        # if st.session_state.feedback_options:
-        #     reveal_next_options()
+
+        # # Display the survey questions after the conversation ends
+        # if st.session_state.post_survey_options:
+        #     post_survey()
+        #     st.session_state.posthoc_survey_info = read_posthoc_survey_info_csv(POSTHOC_SURVEY_INFO_FNAME)
+        
+        st.session_state.chat_finished = True
+        if st.session_state.chat_finished:
+            if st.button("Go Post Survey"):
+                target_page = "pages/post_survey_one.py"
+                st.switch_page(target_page)
 
 
 if __name__ == "__main__":
