@@ -14,7 +14,6 @@ from therapy_utils import generate_response, clean_chat
 def get_survey_sample(all_detections:dict, max_display:int = 10):
     """
     This function samples the survey questions for the user to provide feedback.
-    Sampling function is yet to be done. For now, it returns the first 10 detections which have been identified.
     """
 
     # If there are less than sample size, return all detections
@@ -38,6 +37,32 @@ def get_survey_sample(all_detections:dict, max_display:int = 10):
                 sampled_detections[key] = all_detections[key]
                 samples += 1
     return sampled_detections
+
+
+def disable_copy_paste():
+    # Inject custom CSS to prevent text selection
+    st.markdown("""
+        <style>
+        * {
+            -webkit-user-select: none;  /* Disable text selection in Chrome, Safari, Opera */
+            -moz-user-select: none;     /* Disable text selection in Firefox */
+            -ms-user-select: none;      /* Disable text selection in Internet Explorer/Edge */
+            user-select: none;          /* Disable text selection in standard-compliant browsers */
+        }
+        body {
+            -webkit-touch-callout: none; /* Disable callouts in iOS Safari */
+        }
+        .survey-heading {
+            font-size: 30px !important;
+        }
+        .survey-text {
+            font-size: 20px !important;
+        }
+        .survey-reveal {
+            font-size: 14px !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
 
 def get_survey_info():
@@ -140,6 +165,38 @@ def get_survey_info():
     return survey_questions
 
 
+def setup_survey_config():
+    """This function sets up the session state display options for the survey."""
+
+    # Disable configurations
+    if "disable_user_selections" not in st.session_state:
+        st.session_state.disable_user_selections = False
+
+    if "disable_necessary_reasons" not in st.session_state:
+        st.session_state.disable_necessary_reasons = True
+
+    if "disable_unnecessary_reasons" not in st.session_state:
+        st.session_state.disable_unnecessary_reasons = True
+
+    if "disabled_submit" not in st.session_state:
+        st.session_state.disable_submit = True
+
+    # User display configurations
+    if "user_selections_fixed" not in st.session_state:
+        st.session_state.user_selections_fixed = False
+
+    if "user_nec_reasons_entered" not in st.session_state:
+        st.session_state.user_nec_reasons_entered = False
+
+    if "user_unnec_reasons_entered" not in st.session_state:
+        st.session_state.user_unnec_reasons_entered = False
+
+    # Store the user selections and non-selections
+    if "user_selections" not in st.session_state:
+        st.session_state.user_selections = set() # Stores the keys in string format
+        st.session_state.user_non_selections = set() # Stores the keys in string format
+
+
 def get_user_selections():
     """
     This function asks the user to provide feedback on the revealed detected private information
@@ -153,34 +210,28 @@ def get_user_selections():
     user_conversation = st.session_state.user_conversation
 
     logging.info("User conversation: %s", user_conversation)
-    logging.info("Getting user detections from user conversation")
+    logging.info("Getting detections from user conversation")
 
     if "complete_detections" not in st.session_state:
-        complete_detections = get_survey_info()
+        with st.spinner("Getting detections from user conversation..."):
+            complete_detections = get_survey_info()
         logging.info("Obtained gpt detections from user conversation")
         # logging.info("Complete Detections : %s", complete_detections)
         st.session_state.complete_detections = complete_detections
 
     # Get the survey info from user conversation if not already obtained
     if "survey_info" not in st.session_state:
-        # complete_detections = get_survey_info()
+        logging.info("Sampling survey info from the complete detections.")
         st.session_state.survey_info = get_survey_sample(st.session_state.complete_detections)
         logging.info("Sampled Survey info: %s", st.session_state.survey_info)
 
     survey_info = st.session_state.survey_info
 
-    # Get the revealed detection information and display it to the user
-    if "disable_user_selections" not in st.session_state:
-        st.session_state.disable_user_selections = False
+    # Configuring the setup
+    setup_survey_config()
+    disable_copy_paste()
 
-    if "disabled_submit" not in st.session_state:
-        st.session_state.disable_submit = True
-
-    if "user_selections" not in st.session_state:
-        st.session_state.user_selections = set() # Stores the keys in string format
-        st.session_state.user_non_selections = set() # Stores the keys in string format
-
-    if not st.session_state.disable_user_selections:
+    if not st.session_state.user_selections_fixed:
         # Display the survey information to the user for getting the user selections
         if survey_info == {}:
             st.write("No detection in the conversation.")
@@ -192,34 +243,41 @@ def get_user_selections():
             st.subheader("Select the following information that you think it's necessary to share for the therapy")
 
             for key, value in survey_info.items():
-                col1, row3 = st.columns([5, 1])
-                with col1:
-                    st.checkbox(f"{value['survey_display']}", key=f"checkbox_{key}", value=False,
-                                disabled=st.session_state.disable_user_selections)
-                with row3:
-                    with st.expander("Click to see in chat"):
-                        st.write(f":grey[{value['revealation']}]")
+                # Commenting out the display in columns as click to see in the chat is not optimal
+                # col1, col3 = st.columns([5, 1])
+                # with col1:
+                #     st.checkbox(f"{value['survey_display']}", key=f"checkbox_{key}", value=False,
+                #                 disabled=st.session_state.disable_user_selections)
+                # with col3:
+                #     with st.expander("Click to see in chat"):
+                #         st.write(f":grey[{value['revealation']}]")
 
+                st.checkbox(f"{value['survey_display']}", key=f"checkbox_{key}", value=False)
             # Display button to fix the user selections to proceed to the next step and prevent change
-            st.button("Next", on_click=fix_user_selections, disabled=st.session_state.disable_user_selections)
+            st.button("Next", on_click=fix_user_selections)
 
-    if st.session_state.disable_user_selections:
+    # User selections are fixed, proceed to the next step
+    if st.session_state.user_selections_fixed and not st.session_state.user_nec_reasons_entered:
         get_necessary_reasoning()
+    
+    if st.session_state.user_selections_fixed and st.session_state.user_nec_reasons_entered and not st.session_state.user_unnec_reasons_entered:
+        get_unnecessary_reasoning()
 
-    if not st.session_state.disable_submit:
-        st.button("Submit", on_click=store_feedback, disabled=st.session_state.disable_submit,
-                help="Submit the reasoning for the detected information.")
+    if st.session_state.user_selections_fixed and st.session_state.user_nec_reasons_entered and st.session_state.user_unnec_reasons_entered:
+        display_submit_button()
 
+    if not st.session_state.user_selections_fixed and not survey_info:
+        if st.button("Proceed to Survey 3"):
+            target_page = "pages/post_survey_three.py"
+            st.switch_page(target_page)
+        
 
 def fix_user_selections():
     """
     This function fixes the user selections made in the survey.
     """
-    st.session_state.disable_user_selections = True
-
-    ## Debug session
-    # st.session_state.user_selections = set()
-    # st.session_state.user_non_selections = set()
+    st.session_state.user_selections_fixed = True # Do not display the selections again
+    st.session_state.disable_user_selections = True # Disable the user selections
 
     # Store the user's selected options into st.session_state memory
     # Depending up on the checkbox selection, obtain the keypart and store in memory.
@@ -239,66 +297,99 @@ def fix_user_selections():
 def get_necessary_reasoning():
     """
     This function asks the user to provide reasoning for the selected options in the survey.
+    Display of this function is already taken taken care in the get_user_selections function.
     """
+    if st.session_state.user_selections and not st.session_state.user_nec_reasons_entered:
+        st.subheader("Why you think following information is :blue[necessary] to share for the therapy session?")
 
-    if st.session_state.user_selections:
-        if "disable_necessary_reasons" not in st.session_state:
-            st.session_state.disable_necessary_reasons = True
-        # Display the reasoning text area for the user to provide reasoning for the selected options
-        if st.session_state.disable_necessary_reasons:
-            st.header("Why you think following information is necessary to share for the therapy session?")
-            # Display the options to the user for the selected options
-            for key in st.session_state.user_selections:
-                col1, col2 = st.columns([2, 8])
-                col1.write(st.session_state.survey_info[key]["survey_display"])
-                with col1.expander("See in chat"):
-                    st.write(f":grey[{st.session_state.survey_info[key]['revealation']}]")
-
-                _ = col2.text_input("_", key=f"reasoning_{key}_necessary", label_visibility="collapsed")
+        for key in st.session_state.user_selections:
+            col1, col2 = st.columns([4, 4])
+            col1.write(st.session_state.survey_info[key]["survey_display"])
+            # Commented out for now as the See in chat is not optimal for the user
+            with col1.expander("See in chat"):
+                st.write(f":grey[{st.session_state.survey_info[key]['revealation']}]")
+            
+            _ = col2.text_area("_", key=f"reasoning_{key}_necessary", label_visibility="collapsed",
+                                height=120)
 
         validate_reasoning(prefix="reasoning", suffix="necessary", var_name="disable_necessary_reasons")
-        st.button("Next", on_click=get_unnecessary_reasoning, disabled=st.session_state.disable_necessary_reasons,
-                        help="Proceed to the next step after providing the reasoning.",
+        st.button("Next", on_click=set_user_nec_reasoning, disabled=st.session_state.disable_necessary_reasons,
+                        help="Provide reasoning to proceed to next step.",
                         key="next_button")
     else:
-        get_unnecessary_reasoning()
+        set_user_nec_reasoning()
+
+
+def set_user_nec_reasoning():
+    """
+    This function sets the user_nec_reasons_entered to True after the user provides reasoning for the selected options.
+    """
+    st.session_state.user_nec_reasons_entered = True
+
+    # Captured the reasoning for the selected options
+    for key, value in st.session_state.items():
+        if key.startswith("reasoning_") and key.endswith("_necessary"):
+            key_part = key.split("_")[1]
+            st.session_state.survey_info[key_part]["reasoning"] = value
+
+
+def set_user_unnec_reasoning():
+    """
+    This function sets the user_nec_reasons_entered to True after the user provides reasoning for the selected options.
+    """
+    st.session_state.user_unnec_reasons_entered = True
+
+    # Captured the reasoning for the selected options
+    for key, value in st.session_state.items():
+        if key.startswith("reasoning_") and key.endswith("_unnecessary"):
+            key_part = key.split("_")[1]
+            st.session_state.survey_info[key_part]["reasoning"] = value
 
 
 def get_unnecessary_reasoning():
     """
     This function asks the user to provide reasoning for the selected options in the survey.
     """
-
     # Display the reasoning text area for the user to provide reasoning for the selected options
-    if st.session_state.user_non_selections:
+    if st.session_state.user_non_selections and not st.session_state.user_unnec_reasons_entered:
 
         if "disable_unnecessary_reasons" not in st.session_state:
             st.session_state.disable_unnecessary_reasons = True
 
-        st.header("Why you think following information is **unnecessary** to share for the therapy session, but you still share that with the chatbot?")
-        # Display the options to the user for the selected options
-        for key in st.session_state.user_non_selections:
-            col1, col2 = st.columns([2, 5])
+        if st.session_state.disable_unnecessary_reasons:
+            st.header("Why you think following information is :blue[unnecessary] to share for the therapy session, but you still share that with the chatbot?")
+            # Display the options to the user for the selected options
+            for key in st.session_state.user_non_selections:
+                col1, col2 = st.columns([4, 4])
 
-            # Display the information in the first column
-            col1.write(st.session_state.survey_info[key]["survey_display"])
-            with col1.expander("See in chat"):
-                st.write(f":grey[{st.session_state.survey_info[key]['revealation']}]")
+                # Display the information in the first column
+                col1.write(st.session_state.survey_info[key]["survey_display"])
+                # Commented out for now as the See in chat is not optimal for the user
+                # with col1.expander("See in chat"):
+                #     st.write(f":grey[{st.session_state.survey_info[key]['revealation']}]")
 
-            # Display the reasoning text area in the second column
-            with col2:
-                _ = col2.text_input("_", key=f"reasoning_{key}_unnecessary", label_visibility="collapsed")
+                # Display the reasoning text area in the second column
+                with col2:
+                    _ = col2.text_area("_", key=f"reasoning_{key}_unnecessary", label_visibility="collapsed")
 
         validate_reasoning(prefix="reasoning", suffix="unnecessary", var_name="disable_unnecessary_reasons")
-        st.button("Next", on_click=display_submit_button, disabled=st.session_state.disable_unnecessary_reasons,
-                        help="Proceed to the next step after providing the reasoning.",)
+        st.button("Next", on_click=set_user_unnec_reasoning, disabled=st.session_state.disable_unnecessary_reasons,
+                        help="Proceed to the next step only after providing reason for :red[all].",)
     else:
-        display_submit_button()
+        set_user_unnec_reasoning()
 
 
 def display_submit_button():
     """Enables the submit button after the user provides reasoning for the selected and non-selected options."""
+    st.session_state.user_unnec_reasons_entered = True
+    st.session_state.user_nec_reasons_entered = True
     st.session_state.disable_submit = False
+
+    st.write("Succesfully completed Post Survey 2")
+    if st.button("Part 3: Proceed to Post Survey 3", on_click=store_feedback,
+                     disabled=st.session_state.disable_submit):
+            target_page = "pages/post_survey_3.py"
+            st.switch_page(target_page)
 
 
 def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary", var_name: str = "disable_submit"):
@@ -307,50 +398,39 @@ def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary", var
     """
     for key, value in st.session_state.items():
         if key.startswith(f"{prefix}_") and key.endswith(f"_{suffix}"):
+            print(value)
             if not value:
                 st.session_state[var_name] = True
                 return None
     st.session_state[var_name] = False
 
 
-def pre_survey():
-    """
-    This function displays the pre-survey options to the user.
-    Placeholder for the pre-survey options
-    """
-    pass
-
-
-def post_survey():
-    """
-    This function displays the post-survey options to the user.
-       Placeholder for the post-survey options.
-    """
-    pass
-
-
 def store_feedback():
     """
-    This function stores the user's feedback in structured way locally 
-    and in MongoDB Atlas database.
-    Enables the post survey options after the feedback is submitted.
+    Store the user's feedback in a structured way locally and in Firebase Firestore.
+    Enables the post-survey options after the feedback is submitted.
     """
 
     feedback = defaultdict(dict)
 
     # Add the user conversation and chat history to the storage
-    feedback["user_conversation"] = st.session_state.user_conversation
-    feedback['messages'] = st.session_state.messages
+    feedback["user_conversation"] = st.session_state.get('user_conversation', [])
+    feedback['messages'] = st.session_state.get('messages', [])
 
-    # In survey info capture the reasoning for the selected and non-selected options with the surveyInfo
+    # In survey info, capture the reasoning for the selected and non-selected options
     for key, value in st.session_state.items():
         if key.startswith("reasoning_"):
             key_part = key.split("_")[1]
-            st.session_state.survey_info[key_part]["reasoning"] = value
-            st.session_state.survey_info[key_part]["selected"] = "necessary" if key_part in st.session_state.user_selections else "unnecessary"
+            if key_part in st.session_state.survey_info:
+                st.session_state.survey_info[key_part]["reasoning"] = value
+                st.session_state.survey_info[key_part]["selected"] = (
+                    "necessary" if key_part in st.session_state.get('user_selections', []) else "unnecessary"
+                )
 
     # Add the survey information to the feedback
-    feedback["survey_info"] = st.session_state.survey_info
+    feedback["survey_info"] = st.session_state.get('survey_info', {})
+    prolific_id = st.session_state.get('prolific_id', 'unknown')
+    feedback["prolific_id"] = prolific_id
 
     # Log the user feedback
     logging.info("*=*"*50)
@@ -359,34 +439,29 @@ def store_feedback():
 
     # Dump user feedback to a text file with timestamp reference
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    feedback_file = os.path.join("data", f"feedback_{timestamp}.json")
+    # feedback_file = os.path.join(".logs", f"feedback_{timestamp}.json")
+    # os.makedirs(".logs", exist_ok=True)
+    # with open(feedback_file, "w", encoding='utf-8') as f:
+    #     json.dump(feedback, f, indent=4)
 
-    # Store the feedback in a JSON file
-    json.dump(feedback, open(feedback_file, "w", encoding='utf-8'), indent=4)
+    # Store the feedback in Firebase Firestore
+    try:
+        # Reference to the collection
+        collection_ref = db.collection('part_one_survey_two_responses')
 
-    # Store the feedback in MongoDB Atlas database
-    if st.session_state.mongo_enabled:
-        m_client = st.session_state.mongo_client
+        # Create a unique document name using Prolific ID and timestamp
+        document_name = f"{prolific_id}_{timestamp}"
 
-        # Check if feedback database exists, if not create one
-        if "feedback" not in m_client.list_database_names():
-            db = m_client['feedback']
-        else:
-            db = m_client.get_database("feedback")
+        # Add the feedback document
+        collection_ref.document(document_name).set(feedback)
 
-        # Insert the feedback into the database into the persona_feedback collection
-        # if the collection does not exist, it will be created
-        db.get_collection("persona_feedback").insert_one(feedback)
+        st.success("Feedback submitted successfully.")
+    except Exception as e:
+        st.error(f"An error occurred while submitting feedback: {e}")
 
-    # Clear the chat history and reset the session state
-    clean_chat()
-
-    # Inform the user that the feedback has been submitted successfully
+    # Clear the chat history and reset the session state if needed
+    # clean_chat()
     st.write("Submitted successfully.")
-
-    st.session_state.post_survey_options = True
-    post_survey()
-    # st.stop()
 
 
 def read_posthoc_survey_info_csv(filename):
@@ -395,6 +470,5 @@ def read_posthoc_survey_info_csv(filename):
     Retuns the tuple of (indices, categories, categories_priorities, user_mentioned, survey_display)
     """
     data = pd.read_csv(filename, encoding='utf-8')
-    data.sort_values(by=["category priority", "category"], inplace=True)
-
+    # data.sort_values(by=["category priority", "category"], inplace=True) # Not required.
     return data

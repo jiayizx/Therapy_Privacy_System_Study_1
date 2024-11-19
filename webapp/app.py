@@ -5,7 +5,6 @@ import logging
 import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
-from pymongo import MongoClient
 from typing import Generator
 import openai
 from openai import OpenAI
@@ -28,34 +27,11 @@ from therapy_utils import (
     gpt4_search_persona, read_persona_csv,
     read_unnecessary_info_csv
 )
-from feedback_utils import (
-    get_user_selections, pre_survey, post_survey, read_posthoc_survey_info_csv
-)
 
 
 def setup_logging():
     """Set up logging configuration."""
     logging.basicConfig(level=logging.INFO)
-
-
-def setup_mongodb():
-    """Set up MongoDB Atlas connection."""
-    user = os.environ.get("MONGO_USER", "admin")
-    password = os.environ.get("MONGO_PASSWORD", "")
-    st.session_state.mongo_enabled = True if password != "" else False
-
-    if st.session_state.mongo_enabled:
-        try:
-            URI = os.environ.get(
-                "MONGO_URI",
-                f"mongodb+srv://{user}:{password}@cluster0.vdb4a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-            )
-            st.session_state.mongo_client = MongoClient(URI)
-            logging.info("MongoDB Atlas setup completed.")
-        except Exception as e:
-            logging.error("Cannot connect to MongoDB Atlas: {%s}", e)
-    # else:
-    #     logging.error("MongoDB Atlas is not enabled. Please set the MONGO_PASSWORD environment variable.")
 
 
 def setup_firebase():
@@ -365,7 +341,6 @@ def main():
     # disable_copy_paste()
     setup_logging()
     load_environment_variables()
-    setup_mongodb()
     setup_firebase() # Initialize Firebase Firestore connection
     
     main_categories, persona_category_info, persona_hierarchy_info = read_persona_csv(PERSONA_FILENAME)
@@ -381,8 +356,8 @@ def main():
     agent_1 = "gpt-4o-mini"
     agent_2 = "Human"
     event = "Therapy"
-    min_interactions = 2 # 8 interactins, 4 turns
-    min_interaction_time = 120 # seconds
+    min_interactions = 20 # 8 interactins, 4 turns
+    min_interaction_time = 600 # seconds
 
     words_limit = 100
 
