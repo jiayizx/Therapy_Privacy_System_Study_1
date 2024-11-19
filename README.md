@@ -1,4 +1,4 @@
-# CS7375_System_Design
+# CS7375_System_Design (without persuasion)
 
 ## Abstract
 
