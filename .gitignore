@@ -4,6 +4,15 @@
 # Ignore all log files with .log extension
 *.log
 
+# Ignore the pycache directories
+# Byte-compiled / optimized / DLL files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+**/*.py[cod]
+*$py.class
+**/*$py.class
+
 # ignore csv files
 survey_one_responses.csv
 survey_two_responses.csv
