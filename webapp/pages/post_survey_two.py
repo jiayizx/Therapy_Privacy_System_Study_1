@@ -1,6 +1,34 @@
 import streamlit as st
-import os
-import csv
+import firebase_admin
+from firebase_admin import firestore
+import time
+import logging
+
+# Assuming Firebase setup has already been initialized
+
+def save_survey_two_response_to_firebase(prolific_id, responses):
+    """Save the survey responses for Survey Part 2 to Firebase Firestore."""
+    if "firestore_db" not in st.session_state:
+        logging.error("Firestore DB not set up. Please initialize Firebase first.")
+        return
+
+    db = st.session_state.firestore_db
+    document_name = f"survey_two_{prolific_id}_{int(time.time())}"  # Create a unique document name using prolific_id and timestamp
+
+    # Prepare the data to be saved
+    survey_document = {
+        "prolific_id": prolific_id,
+        "survey_data": responses,
+        "timestamp": firestore.SERVER_TIMESTAMP,  # Automatically set the timestamp in Firestore
+    }
+
+    try:
+        # Save the survey document to the Firestore collection named "survey_two_responses"
+        db.collection("survey_two_responses").document(document_name).set(survey_document)
+        logging.info("Survey Part 2 response successfully saved to Firebase Firestore.")
+    except Exception as e:
+        logging.error(f"Failed to save Survey Part 2 response to Firebase Firestore: {e}")
+
 
 # Set page config
 st.set_page_config(page_title="Post Survey Part 2")
@@ -108,34 +136,18 @@ if st.button("Submit") and not ('survey_submitted' in st.session_state and st.se
     else:
         # Collect all responses
         responses = {
-            'Prolific ID': st.session_state.prolific_id,
-            'Age Range': age_range,
-            'Gender Identity': gender_identity,
-            'Highest Education': highest_education,
-            'Prior Experience': prior_experience,
+            'age_range': age_range,
+            'gender_identity': gender_identity,
+            'highest_education': highest_education,
+            'prior_experience': prior_experience,
         }
-        # Log the responses to a file
-
-        # Define the log file path
-        log_file = 'survey_two_responses.csv'
-
-        # Check if the file exists
-        file_exists = os.path.isfile(log_file)
-
-        # Open the file in append mode
-        with open(log_file, 'a', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['Prolific ID', 'Age Range', 'Gender Identity', 'Highest Education', 'Prior Experience']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-            # Write header only if file does not exist
-            if not file_exists:
-                writer.writeheader()
-
-            # Write the responses
-            writer.writerow(responses)
+        
+        # Store the responses in Firebase
+        save_survey_two_response_to_firebase(st.session_state.prolific_id, responses)
 
         st.success("Thank you for completing the survey!")
         st.balloons()
+
         # Mark responses as submitted
         st.session_state.survey_submitted = True
         st.rerun()

@@ -3,6 +3,35 @@ import pandas as pd
 import os
 import json
 import streamlit_survey as ss
+from firebase_admin import firestore
+import time
+import logging
+
+# Assuming Firebase setup has already been initialized
+
+def save_survey_response_to_firebase(prolific_id, survey_data):
+    """Save the survey responses to Firebase Firestore."""
+    if "firestore_db" not in st.session_state:
+        logging.error("Firestore DB not set up. Please initialize Firebase first.")
+        return
+
+    db = st.session_state.firestore_db
+    document_name = f"survey_one_{prolific_id}_{int(time.time())}"  # Create a unique document name using prolific_id and timestamp
+
+    # Prepare the data to be saved
+    survey_document = {
+        "prolific_id": prolific_id,
+        "survey_data": survey_data,
+        "timestamp": firestore.SERVER_TIMESTAMP,  # Automatically set the timestamp in Firestore
+    }
+
+    try:
+        # Save the survey document to the Firestore collection named "survey_one_responses"
+        db.collection("survey_one_responses").document(document_name).set(survey_document)
+        logging.info("Survey Part 1 response successfully saved to Firebase Firestore.")
+    except Exception as e:
+        logging.error(f"Failed to save survey response to Firebase Firestore: {e}")
+
 
 def main():
     st.title("AI Chatbot Survey: User Experience and Privacy Feedback")
@@ -45,38 +74,37 @@ def main():
 
         for i, statement in enumerate(statements, 1):
             survey.select_slider(
-                label=f"Q{i}: {statement}",
+                label=f"**Q{i}: {statement}**",
                 options=response_options,
                 id=f"Q{i}"
             )
 
         submit_button = st.button(label='Submit')
 
-        response = {}
         if submit_button:
             survey_response = survey.to_json()
             survey_response = json.loads(survey_response)  # Parse the JSON string to a dictionary
             prolific_id = st.session_state.get("prolific_id", "unknown")
-            response_data = pd.DataFrame({
-                "Prolific ID": [prolific_id] * len(statements),
-                "Statement": statements,
-                "Response": [data["value"] for key, data in survey_response.items()]
-            })
-            st.success("Thank you for your feedback!")
-            st.write(response_data)
+            
+            # Prepare survey data for storage
+            survey_data = []
+            for key, data in survey_response.items():
+                survey_data.append({
+                    "question_id": key,
+                    "statement": statements[int(key[1:]) - 1],
+                    "response": data["value"]
+                })
+            
+            # Store the responses in Firebase
+            save_survey_response_to_firebase(prolific_id, survey_data)
 
-            # Save responses to a CSV file
-            if not os.path.exists("survey_one_responses.csv"):
-                response_data.to_csv("survey_one_responses.csv", index=False)
-            else:
-                response_data.to_csv("survey_one_responses.csv", mode='a', header=False, index=False)
+            st.success("Thank you for your feedback!")
 
             # Mark responses as submitted
             st.session_state.responses_submitted = True
 
     else:
         st.write("You have already submitted your responses. Thank you!")
-
 
     if st.session_state.responses_submitted:
         if st.button("Part 2: Proceed to Post Survey Two"):

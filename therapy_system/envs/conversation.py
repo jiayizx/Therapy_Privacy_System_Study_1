@@ -103,19 +103,17 @@ class Conv(Env, ABC):
         logging full state
         """
         Path(self.log_path).mkdir(parents=True, exist_ok=True)
-        self.log_human_readable_state() # log human readable state (for debugging)
+        chat_history = self.log_human_readable_state() # log human readable state (for debugging)
+        return chat_history
 
         # log full state for resuming the game
         # with open(os.path.join(self.log_path, "game_state.json"), "w") as f:
         #     json.dump(self.to_dict(), f, cls=GameEncoder, indent=2)
 
-    def log_human_readable_state(self):
+    def log_human_readable_state(self): 
         """
         easy to inspect log file
         """
-        # log human-readable state
-        # print(self.game_state)
-
         settings = self.game_state[0]["settings"]
         # print(self.game_state[0])
 
@@ -156,3 +154,6 @@ class Conv(Env, ABC):
         # write to log-file
         with open(os.path.join(self.log_path, "interaction.log"), "w") as f:
             f.write(log_str)
+        
+        # print(log_str)
+        return log_str

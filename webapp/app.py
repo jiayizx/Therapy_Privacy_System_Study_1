@@ -10,6 +10,11 @@ from typing import Generator
 import openai
 from openai import OpenAI
 
+# firebase related imports
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+# therapy_system related imports
 sys.path.append("../")
 sys.path.append("./")
 import therapy_system
@@ -51,6 +56,21 @@ def setup_mongodb():
             logging.error("Cannot connect to MongoDB Atlas: {%s}", e)
     # else:
     #     logging.error("MongoDB Atlas is not enabled. Please set the MONGO_PASSWORD environment variable.")
+
+
+def setup_firebase():
+    """Set up Firebase Firestore connection."""
+    if not firebase_admin._apps:
+        # Load Firebase credentials from Streamlit secrets
+        firebase_credentials_dict = dict(st.secrets["firebase_service_account"])  # Convert to a Python dictionary
+        # Initialize the Firebase Admin SDK using the credentials dictionary
+        cred = credentials.Certificate(firebase_credentials_dict)
+        firebase_admin.initialize_app(cred)
+        logging.info("Firebase initialized successfully.")
+
+    # Get a reference to the Firestore database
+    st.session_state.firestore_db = firestore.client()
+    logging.info("Firebase Firestore setup completed.")
 
 
 def load_environment_variables():
@@ -273,13 +293,11 @@ def run_conversation(env, players, is_stream, persona_hierarchy_info, main_categ
     st.session_state.turn += 1
     st.session_state.temp_response = ""
     st.session_state.current_iteration += 1
-    if terminated:
-        st.write("Manually terminated.")
-        logging.info("Manually terminated.")
-        clean_chat()
-        return
-
-    env.log_state()
+    # if terminated:
+    #     st.write("Manually terminated.")
+    #     logging.info("Manually terminated.")
+    #     clean_chat()
+    #     return
 
 
 def sidebar_seeking_help(persona_category_info):
@@ -310,6 +328,31 @@ def disable_copy_paste():
         """, unsafe_allow_html=True)
 
 
+def save_chat_history_to_firebase(prolific_id, chat_history):
+    """Save the chat history to Firebase Firestore."""
+    if "firestore_db" not in st.session_state:
+        logging.error("Firestore DB not set up. Please initialize Firebase first.")
+        return
+
+    db = st.session_state.firestore_db
+    document_name = f"chat_{prolific_id}_{int(time.time())}"  # Create a unique document name using prolific_id and timestamp
+
+    # Prepare the data to be saved
+    chat_document = {
+        "prolific_id": prolific_id,
+        "chat_history": chat_history,
+        "timestamp": firestore.SERVER_TIMESTAMP,  # Automatically set the timestamp in Firestore
+    }
+
+    try:
+        # Save the chat document to the Firestore collection named "chat_histories"
+        db.collection("chat_histories").document(document_name).set(chat_document)
+        logging.info("Chat history successfully saved to Firebase Firestore.")
+    except Exception as e:
+        logging.error(f"Failed to save chat history to Firebase Firestore: {e}")
+
+
+
 def main():
     """Main function to run the Streamlit app."""
     PERSONA_FILENAME = "persona_info_hierarchy.csv"
@@ -319,10 +362,11 @@ def main():
     configure_streamlit()
     ask_prolific_id()
     # print(f"Prolific ID: {st.session_state.prolific_id}")
-    disable_copy_paste()
+    # disable_copy_paste()
     setup_logging()
     load_environment_variables()
     setup_mongodb()
+    setup_firebase() # Initialize Firebase Firestore connection
     
     main_categories, persona_category_info, persona_hierarchy_info = read_persona_csv(PERSONA_FILENAME)
     read_unnecessary_info_csv(UNN_INFO_FNAME)
@@ -337,7 +381,7 @@ def main():
     agent_1 = "gpt-4o-mini"
     agent_2 = "Human"
     event = "Therapy"
-    min_interactions = 8 # 8 interactins, 4 turns
+    min_interactions = 2 # 8 interactins, 4 turns
     min_interaction_time = 120 # seconds
 
     words_limit = 100
@@ -387,6 +431,12 @@ def main():
                 if st.button("Terminate Chat"):
                     st.success("Chat terminated. You can review the chat history.")
                     break
+
+        # deal with the chat history
+        chat_history = env.log_state()
+        # print("Chat history: ", chat_history)
+        save_chat_history_to_firebase(st.session_state.prolific_id, chat_history)
+
 
         # # Collect user feedback
         # # Get the pre survey only if the pre survey options are not displayed already
