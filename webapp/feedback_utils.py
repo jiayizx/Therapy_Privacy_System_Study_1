@@ -1,5 +1,5 @@
 # feedback_utils.py
-
+import re
 import streamlit as st
 import time
 import logging
@@ -38,46 +38,38 @@ def get_survey_sample(all_detections:dict, max_display:int = 10):
                 samples += 1
     return sampled_detections
 
-
 def disable_copy_paste():
-    # Inject custom CSS to prevent text selection
+    # Inject custom JavaScript to prevent copy/paste
     st.markdown("""
+        <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const preventDefaultAction = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            };
+            
+            // Select all textarea elements
+            const textareas = document.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                textarea.addEventListener('copy', preventDefaultAction);
+                textarea.addEventListener('cut', preventDefaultAction);
+                textarea.addEventListener('paste', preventDefaultAction);
+                textarea.addEventListener('contextmenu', preventDefaultAction);
+            });
+        });
+        </script>
+        
         <style>
-        * {
-            -webkit-user-select: none;  /* Disable text selection in Chrome, Safari, Opera */
-            -moz-user-select: none;     /* Disable text selection in Firefox */
-            -ms-user-select: none;      /* Disable text selection in Internet Explorer/Edge */
-            user-select: none;          /* Disable text selection in standard-compliant browsers */
-        }
-        body {
-            -webkit-touch-callout: none; /* Disable callouts in iOS Safari */
-        }
-        .survey-heading {
-            font-size: 30px !important;
-        }
-        .survey-text {
-            font-size: 20px !important;
-        }
-        .survey-reveal {
-            font-size: 14px !important;
+        textarea {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         </style>
-        """, unsafe_allow_html=True)
-    # Disable copy-paste JavaScript
-    # js_code = """ <script>
-    #             const textArea = document.querySelector('.stTextArea textarea');
-    #             textArea.addEventListener('paste', (e) => {
-    #                 e.preventDefault();
-    #             });
-    #             textArea.addEventListener('copy', (e) => {
-    #                 e.preventDefault();
-    #             });
-    #             textArea.addEventListener('cut', (e) => {
-    #                 e.preventDefault();
-    #             });
-    #             </script>
-    #         """
-    # st.components.v1.html(js_code, height=0)
+    """, unsafe_allow_html=True)
+
 
 def get_survey_info():
     """
@@ -241,7 +233,6 @@ def get_user_selections():
 
     # Configuring the setup
     setup_survey_config()
-    disable_copy_paste()
 
     if not st.session_state.user_selections_fixed:
         # Display the survey information to the user for getting the user selections
@@ -277,8 +268,8 @@ def get_user_selections():
 
     if st.session_state.user_selections_fixed and st.session_state.user_nec_reasons_entered and st.session_state.user_unnec_reasons_entered:
         display_submit_button()
-        
-
+    
+    disable_copy_paste()
 
 def fix_user_selections():
     """
@@ -322,7 +313,7 @@ def get_necessary_reasoning():
                 st.write(f":grey[{st.session_state.survey_info[key]['revealation']}]")
             
             _ = col2.text_area("_", key=f"reasoning_{key}_necessary", label_visibility="collapsed",
-                                height=120)
+                                height=120,args=('oncopy="return false" oncut="return false" onpaste="return false"',))
 
         validate_reasoning(prefix="reasoning", suffix="necessary", var_name="disable_necessary_reasons")
         st.button("Next", on_click=set_user_nec_reasoning, disabled=st.session_state.disable_necessary_reasons,
@@ -381,7 +372,8 @@ def get_unnecessary_reasoning():
 
                 # Display the reasoning text area in the second column
                 with col2:
-                    _ = col2.text_area("_", key=f"reasoning_{key}_unnecessary", label_visibility="collapsed")
+                    _ = col2.text_area("_", key=f"reasoning_{key}_unnecessary", label_visibility="collapsed",
+                                        height=120)
 
         validate_reasoning(prefix="reasoning", suffix="unnecessary", var_name="disable_unnecessary_reasons")
         st.button("Next", on_click=set_user_unnec_reasoning, disabled=st.session_state.disable_unnecessary_reasons,
@@ -403,14 +395,16 @@ def display_submit_button():
             st.switch_page(target_page)
 
 
-def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary", var_name: str = "disable_submit"):
+def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary", var_name: str = "disable_submit",
+                       min_words: int = 10):
     """
     This function validates all the reasoning provided by the user for the desired options and sets the var_name to True or False.
     """
+    regex = re.compile(r"[\s]{2,}")
     for key, value in st.session_state.items():
         if key.startswith(f"{prefix}_") and key.endswith(f"_{suffix}"):
-            print(value)
-            if not value:
+            value = regex.sub(" ", value).strip()
+            if not value or len(value.split(" ")) < min_words:
                 st.session_state[var_name] = True
                 return None
     st.session_state[var_name] = False
