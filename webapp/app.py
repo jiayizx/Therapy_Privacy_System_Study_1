@@ -20,12 +20,11 @@ from therapy_system.agents.llm.openai import GPT_MODELS_MAPPING
 # Import functions from therapy_utils and feedback_utils
 from therapy_utils import (
     secure_log_api_key, clean_chat, stream_data, generate_response,
-    gpt4_search_persona, read_persona_csv,
-    read_unnecessary_info_csv
+    gpt4_search_persona, read_persona_csv
 )
-from feedback_utils import (
-    get_user_selections, pre_survey, post_survey, read_posthoc_survey_info_csv
-)
+# from feedback_utils import (
+#     get_user_selections, pre_survey, post_survey, read_posthoc_survey_info_csv
+# )
 
 
 def setup_logging():
@@ -35,9 +34,12 @@ def setup_logging():
 
 def setup_mongodb():
     """Set up MongoDB Atlas connection."""
-    user = os.environ.get("MONGO_USER", "admin")
+    os.environ["MONGO_USER"] = st.secrets["mongo_user"]
+    os.environ["MONGO_PASSWORD"] = st.secrets["mongo_password"]
+    # Setup MongoDB Atlas
+    user = os.environ.get("MONGO_USER", "")
     password = os.environ.get("MONGO_PASSWORD", "")
-    st.session_state.mongo_enabled = True if password != "" else False
+    st.session_state.mongo_enabled = True if password != "" and user != "" else False
 
     if st.session_state.mongo_enabled:
         try:
@@ -49,8 +51,8 @@ def setup_mongodb():
             logging.info("MongoDB Atlas setup completed.")
         except Exception as e:
             logging.error("Cannot connect to MongoDB Atlas: {%s}", e)
-    # else:
-    #     logging.error("MongoDB Atlas is not enabled. Please set the MONGO_PASSWORD environment variable.")
+    else:
+        logging.error("MongoDB Atlas is not enabled.")
 
 
 def load_environment_variables():
@@ -63,7 +65,7 @@ def load_environment_variables():
     if not openai_api_key:
         raise ValueError("OpenAI API key not found in environment variables. Please set the OPENAI_API_KEY environment variable.")
     secure_log_api_key(openai_api_key)
-    
+
 
 def ask_prolific_id():
     if "prolific_id_entered" not in st.session_state:
@@ -313,9 +315,7 @@ def disable_copy_paste():
 def main():
     """Main function to run the Streamlit app."""
     PERSONA_FILENAME = "persona_info_hierarchy.csv"
-    UNN_INFO_FNAME = "unn_info.csv"
-    POSTHOC_SURVEY_INFO_FNAME = "posthoc_survey.csv"
-    
+
     configure_streamlit()
     ask_prolific_id()
     # print(f"Prolific ID: {st.session_state.prolific_id}")
@@ -325,7 +325,6 @@ def main():
     setup_mongodb()
     
     main_categories, persona_category_info, persona_hierarchy_info = read_persona_csv(PERSONA_FILENAME)
-    read_unnecessary_info_csv(UNN_INFO_FNAME)
     initialize_session_state()
 
     # Set default values for variables
@@ -338,7 +337,7 @@ def main():
     agent_2 = "Human"
     event = "Therapy"
     min_interactions = 8 # 8 interactins, 4 turns
-    min_interaction_time = 120 # seconds
+    min_interaction_time = 600 # seconds
 
     words_limit = 100
 
@@ -388,28 +387,10 @@ def main():
                     st.success("Chat terminated. You can review the chat history.")
                     break
 
-        # # Collect user feedback
-        # # Get the pre survey only if the pre survey options are not displayed already
-        # if "pre_survey_options" not in st.session_state:
-        #     st.session_state.pre_survey_options = True
-
-        # # Placeholder for the pre-feedback survey
-        # if st.session_state.pre_survey_options:
-        #     st.session_state.pre_survey_options = False
-        #     pre_survey()
-
-        # # Get the user's feedback on the revealed detected private information
-        # get_user_selections()
-
-        # # Display the survey questions after the conversation ends
-        # if st.session_state.post_survey_options:
-        #     post_survey()
-        #     st.session_state.posthoc_survey_info = read_posthoc_survey_info_csv(POSTHOC_SURVEY_INFO_FNAME)
-        
         st.session_state.chat_finished = True
         if st.session_state.chat_finished:
             if st.button("Go Post Survey"):
-                target_page = "pages/post_survey_one.py"
+                target_page = "pages/post_survey_1.py"
                 st.switch_page(target_page)
 
 

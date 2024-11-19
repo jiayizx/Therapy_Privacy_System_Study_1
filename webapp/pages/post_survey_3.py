@@ -3,14 +3,14 @@ import os
 import csv
 
 # Set page config
-st.set_page_config(page_title="Post Survey Part 2")
+st.set_page_config(page_title="Post Survey Part 3")
 
 # Ensure Prolific ID is available
 if 'prolific_id' not in st.session_state or st.session_state.prolific_id == '':
     st.warning("Please go back to the main page and enter your Prolific ID.")
     st.stop()
 
-st.title("Post Survey Part 2")
+st.title("Post Survey Part 3")
 
 # 1. Age range
 if 'age_range' not in st.session_state:
@@ -139,6 +139,7 @@ if st.button("Submit") and not ('survey_submitted' in st.session_state and st.se
         # Mark responses as submitted
         st.session_state.survey_submitted = True
         st.rerun()
+
 
 # Optional: Display a message if the survey is already completed
 if 'survey_submitted' in st.session_state and st.session_state.survey_submitted:
