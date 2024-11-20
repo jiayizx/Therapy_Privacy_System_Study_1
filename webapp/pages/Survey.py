@@ -12,7 +12,7 @@ def main():
         st.stop()
 
     if st.session_state.phase != "post_survey":
-        st.warning("Please complete the chat session before proceeding to the survey.")
+        st.warning("Please first role-play as Alex and complete the chat with AI therapist.")
         st.stop()
 
     # Preload the survey for the second part of the survey

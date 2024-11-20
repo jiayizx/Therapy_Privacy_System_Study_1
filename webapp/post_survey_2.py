@@ -55,5 +55,3 @@ def post_survey_two():
 
     load_survey_info()
     get_user_selections()
-
-    # st.rerun()
