@@ -1,3 +1,4 @@
+import asyncio
 import streamlit as st
 import os
 import csv
@@ -33,10 +34,12 @@ def prep_survey_two():
     load_survey_info()
 
     if "complete_detections" not in st.session_state:
-        thread = threading.Thread(target=load_survey_info, daemon=True)
+        async def wrapper():
+            st.session_state.complete_detections = await get_survey_info()
+        
+        thread = threading.Thread(target=lambda: asyncio.run(wrapper()))
         add_script_run_ctx(thread)
         thread.start()
-    print(f"Deamon Detections: {st.session_state.get('complete_detections', '')}", )
 
 def post_survey_two():
     """ Main function for the post survey part 2 page. """

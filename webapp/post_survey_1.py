@@ -51,27 +51,27 @@ def post_survey_one():
     statements = [
         "I trust this AI chatbot to be reliable.",
         "I do not feel totally safe providing personal private information over this chatbot.",
-        # "I think this AI chatbot is persuasive.",
-        # "I enjoyed the therapy session.",
-        # "This chatbot demonstrates empathy during interactions.",
-        # "I feel understood when I talk to this chatbot.",
-        # "The AI chatbot's responses are appropriate for my needs.",
-        # "I am comfortable using this chatbot for sensitive discussions.",
-        # "This chatbot respects my privacy.",
-        # "I believe the chatbot provides helpful recommendations.",
-        # "I feel the chatbot has a human-like understanding of my concerns."
-        # "I enjoyed the therapy session.",
-        # "I trust this AI chatbot to be reliable.",
-        # "I think this AI chatbot is persuasive.",
-        # "I do not feel totally safe providing personal private information over this chatbot.",
-        # "I can understand what Alex was going through recently.",
-        # "I recognize Alex's situation.",
-        # "I can see Alex's point of view.",
-        # "Alex's reactions to the situation are understandable.",
-        # "Alex's emotions are genuine.",
-        # "I was in a similar emotional state as Alex when chatting with the AI therapist.",
-        # "I experienced the same emotions as Alex when chatting with the AI therapist.",
-        # "I can feel Alex's emotions."
+        "I think this AI chatbot is persuasive.",
+        "I enjoyed the therapy session.",
+        "This chatbot demonstrates empathy during interactions.",
+        "I feel understood when I talk to this chatbot.",
+        "The AI chatbot's responses are appropriate for my needs.",
+        "I am comfortable using this chatbot for sensitive discussions.",
+        "This chatbot respects my privacy.",
+        "I believe the chatbot provides helpful recommendations.",
+        "I feel the chatbot has a human-like understanding of my concerns."
+        "I enjoyed the therapy session.",
+        "I trust this AI chatbot to be reliable.",
+        "I think this AI chatbot is persuasive.",
+        "I do not feel totally safe providing personal private information over this chatbot.",
+        "I can understand what Alex was going through recently.",
+        "I recognize Alex's situation.",
+        "I can see Alex's point of view.",
+        "Alex's reactions to the situation are understandable.",
+        "Alex's emotions are genuine.",
+        "I was in a similar emotional state as Alex when chatting with the AI therapist.",
+        "I experienced the same emotions as Alex when chatting with the AI therapist.",
+        "I can feel Alex's emotions."
     ]
 
     # Add a placeholder option at the beginning
@@ -108,7 +108,7 @@ def post_survey_one():
         # Submit button to save responses
          # Submit is misleading, change to Next
         submit_button = st.button(label='Next', key='survey_1_submit_button')
-        
+
     if submit_button:
         # Check if any question still has the placeholder selection
         if "Select an option" in st.session_state.survey_response.values():

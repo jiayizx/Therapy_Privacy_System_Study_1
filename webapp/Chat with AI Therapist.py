@@ -355,7 +355,7 @@ def main():
     # disable_copy_paste()
     setup_logging()
     load_environment_variables()
-    # setup_firebase() # Debug
+    setup_firebase() # Debug
     main_categories, persona_category_info, persona_hierarchy_info = read_persona_csv(PERSONA_FILENAME)
     read_unnecessary_info_csv(UNN_INFO_FNAME)
 
@@ -430,7 +430,7 @@ def main():
                     if st.session_state.chat_finished:
                         st.session_state.phase = "post_survey"
                         chat_history = env.log_state()
-                        # save_chat_history_to_firebase(st.session_state.prolific_id, chat_history) # Debug
+                        save_chat_history_to_firebase(st.session_state.prolific_id, chat_history) # Debug
                         st.rerun()  # Trigger rerun to refresh UI
 
         # Survey section should be displayed if in the post-survey phase
