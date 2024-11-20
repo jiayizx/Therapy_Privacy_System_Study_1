@@ -11,6 +11,8 @@ from typing import List
 import pandas as pd
 from therapy_utils import generate_response, clean_chat
 
+MIN_WORDS = 10
+
 def get_survey_sample(all_detections:dict, max_display:int = 10):
     """
     This function samples the survey questions for the user to provide feedback.
@@ -40,57 +42,18 @@ def get_survey_sample(all_detections:dict, max_display:int = 10):
 
 def disable_copy_paste():
     # Inject both JavaScript and CSS using a single HTML component
+    # Add custom JavaScript to prevent cut/copy/paste
     st.components.v1.html("""
-        <style>
-        * {
-                -webkit-user-select: none;  /* Disable text selection in Chrome, Safari, Opera */
-                -moz-user-select: none;     /* Disable text selection in Firefox */
-                -ms-user-select: none;      /* Disable text selection in Internet Explorer/Edge */
-                user-select: none;          /* Disable text selection in standard-compliant browsers */
-            }
-            body {
-                -webkit-touch-callout: none; /* Disable callouts in iOS Safari */
-            }
-            /* Disable text selection */
-            .stTextArea textarea {
-                user-select: none !important;
-                -webkit-user-select: none !important;
-                -moz-user-select: none !important;
-                -ms-user-select: none !important;
-            }
-        </style>
-        
-        <script>
-            // Function to disable copy/paste events
-            function disableCopyPaste() {
-                const textareas = parent.document.querySelectorAll('.stTextArea textarea');
-                textareas.forEach(textarea => {
-                    textarea.addEventListener('copy', e => e.preventDefault());
-                    textarea.addEventListener('cut', e => e.preventDefault());
-                    textarea.addEventListener('paste', e => e.preventDefault());
-                    textarea.addEventListener('contextmenu', e => e.preventDefault());
-                    
-                    // Disable keyboard shortcuts
-                    textarea.addEventListener('keydown', e => {
-                        if ((e.ctrlKey || e.metaKey) && 
-                            (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
-                            e.preventDefault();
-                        }
-                    });
-                });
-            }
-            
-            // Run immediately and also after a short delay to ensure elements are loaded
-            disableCopyPaste();
-            setTimeout(disableCopyPaste, 500);
-            
-            // Monitor for dynamic changes
-            const observer = new MutationObserver(disableCopyPaste);
-            observer.observe(parent.document.body, {
-                childList: true,
-                subtree: true
-            });
-        </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Prevent cut/copy/paste on text inputs and textareas
+        document.querySelectorAll('input[type="text"], textarea').forEach(function(element) {
+            element.addEventListener('cut', function(e) { e.preventDefault(); });
+            element.addEventListener('copy', function(e) { e.preventDefault(); });
+            element.addEventListener('paste', function(e) { e.preventDefault(); });
+        });
+    });
+    </script>
     """, height=0)
 
     st.markdown("""
@@ -363,7 +326,7 @@ def get_necessary_reasoning():
 
         validate_reasoning(prefix="reasoning", suffix="necessary", var_name="disable_necessary_reasons")
         st.button("Next", on_click=set_user_nec_reasoning, disabled=st.session_state.disable_necessary_reasons,
-                        help="Provide reasoning to proceed to next step.",
+                        help=f"Provide reasoning for :red[all with at-least {MIN_WORDS} words] to proceed to next step.",
                         key="next_button")
     else:
         set_user_nec_reasoning()
@@ -423,7 +386,7 @@ def get_unnecessary_reasoning():
 
         validate_reasoning(prefix="reasoning", suffix="unnecessary", var_name="disable_unnecessary_reasons")
         st.button("Next", on_click=set_user_unnec_reasoning, disabled=st.session_state.disable_unnecessary_reasons,
-                        help="Proceed to the next step only after providing reason for :red[all].",)
+                        help=f"Provide reasoning for :red[all with at-least {MIN_WORDS} words] to proceed to next step.")
     else:
         set_user_unnec_reasoning()
 
@@ -437,11 +400,11 @@ def display_submit_button():
     st.write("Succesfully completed Post Survey 2")
     if st.button("Part 3: Proceed to Post Survey 3", on_click=store_feedback,
                      disabled=st.session_state.disable_submit):
-            st.session_state.survey_2_completed = True
+        st.session_state.survey_2_completed = True
 
 
 def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary",
-                       var_name: str = "disable_submit", min_words: int = 10):
+                       var_name: str = "disable_submit", min_words: int = MIN_WORDS):
     """
     This function validates all the reasoning provided by the user for the desired options and 
     sets the var_name to True or False.

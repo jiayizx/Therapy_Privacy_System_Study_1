@@ -240,7 +240,7 @@ def run_conversation(env, players, is_stream, persona_hierarchy_info, main_categ
     technique = None
     if (str(action) == "Human-input") and (st.session_state.temp_response == ""):
         with st.form(key='human_input_form', clear_on_submit=True):
-            response = st.text_input("Your input:", key="human_input")
+            response = st.text_input("You:", key="human_input") # "You" instead of "Your turn"
             submit_button = st.form_submit_button(label='Send')
         if submit_button and response:
             with st.chat_message(players[st.session_state.turn % 2]):
@@ -318,6 +318,7 @@ def disable_copy_paste():
         }
         </style>
         """, unsafe_allow_html=True)
+    st
 
 
 def save_chat_history_to_firebase(prolific_id, chat_history):
@@ -355,7 +356,7 @@ def main():
     # disable_copy_paste()
     setup_logging()
     load_environment_variables()
-    setup_firebase() # Debug
+    # setup_firebase() # Debug
     main_categories, persona_category_info, persona_hierarchy_info = read_persona_csv(PERSONA_FILENAME)
     read_unnecessary_info_csv(UNN_INFO_FNAME)
 
@@ -430,7 +431,7 @@ def main():
                     if st.session_state.chat_finished:
                         st.session_state.phase = "post_survey"
                         chat_history = env.log_state()
-                        save_chat_history_to_firebase(st.session_state.prolific_id, chat_history) # Debug
+                        # save_chat_history_to_firebase(st.session_state.prolific_id, chat_history) # Debug
                         st.rerun()  # Trigger rerun to refresh UI
 
         # Survey section should be displayed if in the post-survey phase
