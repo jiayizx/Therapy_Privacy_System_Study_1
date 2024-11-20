@@ -267,9 +267,7 @@ def get_user_selections():
         display_submit_button()
 
     if not st.session_state.user_selections_fixed and not survey_info:
-        if st.button("Proceed to Survey 3"):
-            target_page = "pages/post_survey_three.py"
-            st.switch_page(target_page)
+        st.session_state.survey_2_completed = True
         
 
 def fix_user_selections():
@@ -388,8 +386,7 @@ def display_submit_button():
     st.write("Succesfully completed Post Survey 2")
     if st.button("Part 3: Proceed to Post Survey 3", on_click=store_feedback,
                      disabled=st.session_state.disable_submit):
-            target_page = "pages/post_survey_3.py"
-            st.switch_page(target_page)
+            st.session_state.survey_2_completed = True
 
 
 def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary", var_name: str = "disable_submit"):
