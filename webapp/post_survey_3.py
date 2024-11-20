@@ -150,6 +150,10 @@ def post_survey_three():
             st.session_state.survey_submitted = True
             st.session_state.survey_3_completed = True
 
+    if st.session_state.survey_3_completed:
+        st.write("Thank you for your participation! You can proceed to Profolio:")
+        st.markdown("[Complete Submission](https://app.prolific.com/submissions/complete?cc=CWU9VX3E)")
+
     # Optional: Display a message if the survey is already completed
     if 'survey_submitted' in st.session_state and st.session_state.survey_submitted:
         st.write("You have already completed all the survey. Thank you!")
