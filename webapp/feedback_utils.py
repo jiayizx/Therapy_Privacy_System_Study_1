@@ -1,5 +1,5 @@
 # feedback_utils.py
-
+import re
 import streamlit as st
 import time
 import logging
@@ -38,9 +38,61 @@ def get_survey_sample(all_detections:dict, max_display:int = 10):
                 samples += 1
     return sampled_detections
 
-
 def disable_copy_paste():
-    # Inject custom CSS to prevent text selection
+    # Inject both JavaScript and CSS using a single HTML component
+    st.components.v1.html("""
+        <style>
+        * {
+                -webkit-user-select: none;  /* Disable text selection in Chrome, Safari, Opera */
+                -moz-user-select: none;     /* Disable text selection in Firefox */
+                -ms-user-select: none;      /* Disable text selection in Internet Explorer/Edge */
+                user-select: none;          /* Disable text selection in standard-compliant browsers */
+            }
+            body {
+                -webkit-touch-callout: none; /* Disable callouts in iOS Safari */
+            }
+            /* Disable text selection */
+            .stTextArea textarea {
+                user-select: none !important;
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+            }
+        </style>
+        
+        <script>
+            // Function to disable copy/paste events
+            function disableCopyPaste() {
+                const textareas = parent.document.querySelectorAll('.stTextArea textarea');
+                textareas.forEach(textarea => {
+                    textarea.addEventListener('copy', e => e.preventDefault());
+                    textarea.addEventListener('cut', e => e.preventDefault());
+                    textarea.addEventListener('paste', e => e.preventDefault());
+                    textarea.addEventListener('contextmenu', e => e.preventDefault());
+                    
+                    // Disable keyboard shortcuts
+                    textarea.addEventListener('keydown', e => {
+                        if ((e.ctrlKey || e.metaKey) && 
+                            (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+                            e.preventDefault();
+                        }
+                    });
+                });
+            }
+            
+            // Run immediately and also after a short delay to ensure elements are loaded
+            disableCopyPaste();
+            setTimeout(disableCopyPaste, 500);
+            
+            // Monitor for dynamic changes
+            const observer = new MutationObserver(disableCopyPaste);
+            observer.observe(parent.document.body, {
+                childList: true,
+                subtree: true
+            });
+        </script>
+    """, height=0)
+
     st.markdown("""
         <style>
         * {
@@ -63,7 +115,6 @@ def disable_copy_paste():
         }
         </style>
         """, unsafe_allow_html=True)
-
 
 def get_survey_info():
     """
@@ -162,6 +213,7 @@ def get_survey_info():
                 "user_mentioned": st.session_state.posthoc_survey_info.loc[kn, "user_mentioned"],
                 "survey_display": st.session_state.posthoc_survey_info.loc[kn, "survey_display"],
             }
+    st.session_state.complete_detections = survey_questions
     return survey_questions
 
 
@@ -213,7 +265,7 @@ def get_user_selections():
     logging.info("Getting detections from user conversation")
 
     if "complete_detections" not in st.session_state:
-        with st.spinner("Getting detections from user conversation..."):
+        with st.spinner("Analyzing conversation..."):
             complete_detections = get_survey_info()
         logging.info("Obtained gpt detections from user conversation")
         # logging.info("Complete Detections : %s", complete_detections)
@@ -234,7 +286,10 @@ def get_user_selections():
     if not st.session_state.user_selections_fixed:
         # Display the survey information to the user for getting the user selections
         if survey_info == {}:
-            st.write("No detection in the conversation.")
+            st.write("Successfully analyzed conversation.")
+            st.session_state.user_selections_fixed = True
+            st.session_state.user_nec_reasons_entered = True
+            st.session_state.user_unnec_reasons_entered = True
             st.session_state.disable_submit = False
         else:
             logging.info("Surveying user, waiting for user to complete selections.")
@@ -265,10 +320,6 @@ def get_user_selections():
 
     if st.session_state.user_selections_fixed and st.session_state.user_nec_reasons_entered and st.session_state.user_unnec_reasons_entered:
         display_submit_button()
-
-    if not st.session_state.user_selections_fixed and not survey_info:
-        st.session_state.survey_2_completed = True
-        
 
 def fix_user_selections():
     """
@@ -389,17 +440,21 @@ def display_submit_button():
             st.session_state.survey_2_completed = True
 
 
-def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary", var_name: str = "disable_submit"):
+def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary",
+                       var_name: str = "disable_submit", min_words: int = 10):
     """
-    This function validates all the reasoning provided by the user for the desired options and sets the var_name to True or False.
+    This function validates all the reasoning provided by the user for the desired options and 
+    sets the var_name to True or False.
     """
+    regex = re.compile(r"[\s]{2,}")
     for key, value in st.session_state.items():
         if key.startswith(f"{prefix}_") and key.endswith(f"_{suffix}"):
-            print(value)
-            if not value:
+            value = regex.sub(" ", value).strip()
+            if not value or len(value.split(" ")) < min_words:
                 st.session_state[var_name] = True
                 return None
     st.session_state[var_name] = False
+    return None
 
 
 def store_feedback():
@@ -441,24 +496,36 @@ def store_feedback():
     # with open(feedback_file, "w", encoding='utf-8') as f:
     #     json.dump(feedback, f, indent=4)
 
-    # Store the feedback in Firebase Firestore
-    try:
-        # Reference to the collection
-        collection_ref = db.collection('group_one_survey_two_responses')
+    if "firestore_db" in st.session_state:
+        # Store the feedback in Firebase Firestore if configured
+        try:
+            db = st.session_state.firestore_db
+            # Reference to the collection
+            collection_ref = db.collection('group_one_survey_two_responses')
 
-        # Create a unique document name using Prolific ID and timestamp
-        document_name = f"{prolific_id}_{timestamp}"
+            # Create a unique document name using Prolific ID and timestamp
+            document_name = f"{prolific_id}_{timestamp}"
 
-        # Add the feedback document
-        collection_ref.document(document_name).set(feedback)
+            # Add the feedback document
+            collection_ref.document(document_name).set(feedback)
 
-        st.success("Feedback submitted successfully.")
-    except Exception as e:
-        st.error(f"An error occurred while submitting feedback: {e}")
+            st.success("Feedback submitted successfully.")
+        except Exception as e:
+            st.error(f"An error occurred while submitting feedback: {e}")
 
     # Clear the chat history and reset the session state if needed
     # clean_chat()
-    st.write("Submitted successfully.")
+    st.session_state.survey_2_completed = True
+
+
+def log_info(message, mode:str="info"):
+    """
+    This function logs the information message to the console.
+    """
+    if mode == "error":
+        logging.error(message)
+    else:
+        logging.info(message)
 
 
 def read_posthoc_survey_info_csv(filename):

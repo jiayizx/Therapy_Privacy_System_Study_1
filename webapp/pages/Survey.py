@@ -1,6 +1,6 @@
 import streamlit as st
 from webapp.post_survey_1 import post_survey_one
-from webapp.post_survey_2 import post_survey_two
+from webapp.post_survey_2 import post_survey_two, prep_survey_two
 from webapp.post_survey_3 import post_survey_three
 
 def main():
@@ -14,6 +14,9 @@ def main():
     if st.session_state.phase != "post_survey":
         st.warning("Please complete the chat session before proceeding to the survey.")
         st.stop()
+
+    # Preload the survey for the second part of the survey
+    prep_survey_two()
 
     # Check if the first survey is completed
     if 'survey_1_completed' not in st.session_state:

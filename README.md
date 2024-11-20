@@ -23,7 +23,7 @@ conda activate therapy
 pip install -r requirements.txt
 
 # Update secrets.env to include your OpenAI API key to run locally
-streamlit run webapp/app.py
+streamlit run webapp/"Chat with AI Therapist".py
 ```
 
 

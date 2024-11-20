@@ -34,7 +34,7 @@ def post_survey_three():
     st.write("### Post Survey Part 3")
 
     if 'survey_2_completed' not in st.session_state:
-        st.warning("Please complete the first part of the survey.")
+        st.warning("Please complete the second part of the survey.")
         st.stop()
 
     # 1. Age range
@@ -150,7 +150,7 @@ def post_survey_three():
             st.session_state.survey_submitted = True
             st.session_state.survey_3_completed = True
 
-    if st.session_state.survey_3_completed:
+    if st.session_state.get("survey_3_completed", False):
         st.write("Thank you for your participation! You can proceed to Profolio:")
         st.markdown("[Complete Submission](https://app.prolific.com/submissions/complete?cc=CWU9VX3E)")
 
