@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from typing import Generator
 import openai
 from openai import OpenAI
+from st_pages import get_nav_from_toml
 
 # firebase related imports
 import firebase_admin
@@ -59,7 +60,7 @@ def load_environment_variables():
     if not openai_api_key:
         raise ValueError("OpenAI API key not found in environment variables. Please set the OPENAI_API_KEY environment variable.")
     secure_log_api_key(openai_api_key)
-    
+
 
 def ask_prolific_id():
     """Handles the input of Prolific ID and website password."""
@@ -90,12 +91,12 @@ def ask_prolific_id():
 
         # Do not call st.stop() here. It causes the UI to freeze at this stage.
         return
-    
 
 
 def configure_streamlit():
     """Configure Streamlit page settings."""
-    st.set_page_config(initial_sidebar_state="expanded", page_title="AI-powered Therapist", layout="wide")
+    st.set_page_config(initial_sidebar_state="expanded", page_title="Chat wit AI Therapist", layout="wide")
+    st.navigation(get_nav_from_toml(".streamlit/pages.toml"))
 
 
 def initialize_session_state():
@@ -119,7 +120,7 @@ def start_conversation(agent_1, agent_2, therapist_system_prompt, persuasion_tec
     if agent_1 == "Human" and agent_2 == "Human":
         st.error("Error: Both agents cannot be human. Please select at least one AI agent.")
         st.stop()
-    
+
     human_details = {
         "engine": "Human",
         "system": "",

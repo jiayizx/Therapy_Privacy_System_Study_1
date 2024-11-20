@@ -1,0 +1,7 @@
+[[pages]]
+path = "app.py"
+name = "Chat with AI Therapist"
+
+[[pages]]
+path = "pages/post_survey.py"
+name = "Survey"
