@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from typing import Generator
 import openai
 from openai import OpenAI
-from st_pages import get_nav_from_toml
 
 # firebase related imports
 import firebase_admin
@@ -96,8 +95,6 @@ def ask_prolific_id():
 def configure_streamlit():
     """Configure Streamlit page settings."""
     st.set_page_config(initial_sidebar_state="expanded", page_title="Chat wit AI Therapist", layout="wide")
-    st.navigation(get_nav_from_toml(".streamlit/pages.toml"))
-
 
 def initialize_session_state():
     """Initialize session state variables."""
@@ -351,7 +348,6 @@ def main():
     """Main function to run the Streamlit app."""
     PERSONA_FILENAME = "persona_info_hierarchy.csv"
     UNN_INFO_FNAME = "unn_info.csv"
-    POSTHOC_SURVEY_INFO_FNAME = "posthoc_survey.csv"
     
     # Streamlit page configuration
     configure_streamlit()
@@ -359,7 +355,7 @@ def main():
     # disable_copy_paste()
     setup_logging()
     load_environment_variables()
-    setup_firebase()
+    setup_firebase() # Debug
     main_categories, persona_category_info, persona_hierarchy_info = read_persona_csv(PERSONA_FILENAME)
     read_unnecessary_info_csv(UNN_INFO_FNAME)
 
@@ -434,14 +430,15 @@ def main():
                     if st.session_state.chat_finished:
                         st.session_state.phase = "post_survey"
                         chat_history = env.log_state()
-                        save_chat_history_to_firebase(st.session_state.prolific_id, chat_history)
+                        save_chat_history_to_firebase(st.session_state.prolific_id, chat_history) # Debug
                         st.rerun()  # Trigger rerun to refresh UI
 
         # Survey section should be displayed if in the post-survey phase
         if st.session_state.phase == "post_survey":
-            if st.button("Proceed to Post Survey"):
-                target_page = "pages/post_survey.py"
+            if st.button("Proceed to Survey"):
+                target_page = "pages/Survey.py"
                 st.switch_page(target_page)
+
 
 if __name__ == "__main__":
     main()

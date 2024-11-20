@@ -4,7 +4,16 @@ from webapp.post_survey_2 import post_survey_two
 from webapp.post_survey_3 import post_survey_three
 
 def main():
-    st.title("Post Survey")
+    st.title("Survey")
+
+    # Ensure Prolific ID is available
+    if 'prolific_id' not in st.session_state or st.session_state.prolific_id == '':
+        st.warning("Please go back to the 'Chat with AI Therapist' page and enter your Prolific ID.")
+        st.stop()
+
+    if st.session_state.phase != "post_survey":
+        st.warning("Please complete the chat session before proceeding to the survey.")
+        st.stop()
 
     # Check if the first survey is completed
     if 'survey_1_completed' not in st.session_state:
