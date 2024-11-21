@@ -133,7 +133,7 @@ def post_survey_three():
     st.session_state.prior_experience = prior_experience
 
     # Submit button
-    if st.button("Submit") and not ('survey_submitted' in st.session_state and st.session_state.survey_submitted):
+    if st.button("Submit", disabled=st.session_state.get("survey_submitted", False)) and not ('survey_submitted' in st.session_state and st.session_state.survey_submitted):
         # Validate that all selections are made
         if age_range == "Select your age range":
             st.error("Please select your age range.")
@@ -163,7 +163,7 @@ def post_survey_three():
             st.session_state.survey_3_completed = True
 
             # Close the current tab after 5 seconds
-            close_and_redirect()
+            # close_and_redirect()
 
     # Optional: Display a message if the survey is already completed
     if 'survey_submitted' in st.session_state and st.session_state.survey_submitted:

@@ -43,18 +43,57 @@ def get_survey_sample(all_detections:dict, max_display:int = 10):
 
 def disable_copy_paste():
     # Inject both JavaScript and CSS using a single HTML component
-    # Add custom JavaScript to prevent cut/copy/paste
     st.components.v1.html("""
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Prevent cut/copy/paste on text inputs and textareas
-        document.querySelectorAll('input[type="text"], textarea').forEach(function(element) {
-            element.addEventListener('cut', function(e) { e.preventDefault(); });
-            element.addEventListener('copy', function(e) { e.preventDefault(); });
-            element.addEventListener('paste', function(e) { e.preventDefault(); });
-        });
-    });
-    </script>
+        <style>
+        * {
+                -webkit-user-select: none;  /* Disable text selection in Chrome, Safari, Opera */
+                -moz-user-select: none;     /* Disable text selection in Firefox */
+                -ms-user-select: none;      /* Disable text selection in Internet Explorer/Edge */
+                user-select: none;          /* Disable text selection in standard-compliant browsers */
+            }
+            body {
+                -webkit-touch-callout: none; /* Disable callouts in iOS Safari */
+            }
+            /* Disable text selection */
+            .stTextArea textarea {
+                user-select: none !important;
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+            }
+        </style>
+        
+        <script>
+            // Function to disable copy/paste events
+            function disableCopyPaste() {
+                const textareas = parent.document.querySelectorAll('.stTextArea textarea');
+                textareas.forEach(textarea => {
+                    textarea.addEventListener('copy', e => e.preventDefault());
+                    textarea.addEventListener('cut', e => e.preventDefault());
+                    textarea.addEventListener('paste', e => e.preventDefault());
+                    textarea.addEventListener('contextmenu', e => e.preventDefault());
+                    
+                    // Disable keyboard shortcuts
+                    textarea.addEventListener('keydown', e => {
+                        if ((e.ctrlKey || e.metaKey) && 
+                            (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+                            e.preventDefault();
+                        }
+                    });
+                });
+            }
+            
+            // Run immediately and also after a short delay to ensure elements are loaded
+            disableCopyPaste();
+            setTimeout(disableCopyPaste, 500);
+            
+            // Monitor for dynamic changes
+            const observer = new MutationObserver(disableCopyPaste);
+            observer.observe(parent.document.body, {
+                childList: true,
+                subtree: true
+            });
+        </script>
     """, height=0)
 
     st.markdown("""
@@ -206,9 +245,6 @@ def setup_survey_config():
 
     if "user_unnec_reasons_entered" not in st.session_state:
         st.session_state.user_unnec_reasons_entered = False
-    
-    if "survey_2_completed" not in st.session_state:
-        st.session_state.survey_2_completed = False
 
     # Store the user selections and non-selections
     if "user_selections" not in st.session_state:
@@ -246,7 +282,7 @@ def get_user_selections():
 
     # Configuring the setup
     setup_survey_config()
-    disable_copy_paste()
+    # disable_copy_paste()
 
     if not st.session_state.user_selections_fixed:
         # Display the survey information to the user for getting the user selections
@@ -275,9 +311,10 @@ def get_user_selections():
 
                 st.checkbox(f"{value['survey_display']}", key=f"checkbox_{key}", value=False)
             # Display button to fix the user selections to proceed to the next step and prevent change
-            st.button("Next", on_click=fix_user_selections, key="fix_selections_next_button",)
-    logging.info("User selections fixed: %s", st.session_state.user_selections_fixed)
-    
+            st.button("Next", on_click=fix_user_selections)
+
+    logging.info("Nec: %s", st.session_state.user_nec_reasons_entered)
+    logging.info("Unnec: %s", st.session_state.user_unnec_reasons_entered)
     # User selections are fixed, proceed to the next step
     if (st.session_state.user_selections_fixed
         and not st.session_state.user_nec_reasons_entered):
@@ -292,8 +329,8 @@ def get_user_selections():
         and st.session_state.user_nec_reasons_entered
         and st.session_state.user_unnec_reasons_entered):
         # Not required to display the submit button as the user can directly proceed to the next page
-        display_submit_button()
-        # navigate_to_next_page()
+        # display_submit_button()
+        navigate_to_next_page()
     # st.rerun()
 
 def fix_user_selections():
@@ -337,29 +374,29 @@ def get_necessary_reasoning():
                                 height=120)
 
         validate_reasoning(prefix="reasoning", suffix="necessary", var_name="disable_necessary_reasons")
-        st.button("Next", on_click=set_user_nec_reasoning(),
+        st.button("Next", on_click=set_user_nec_reasoning,
                   disabled=st.session_state.disable_necessary_reasons,
                   help=f"Provide reasoning for :red[all with at-least {MIN_WORDS} words] to proceed to next step.",
                   key="next_button")
-    # else:
+    else:
         # set_reasoning("reasoning", "necessary", True, "user_nec_reasons_entered")
-        # set_user_nec_reasoning()
+        set_user_nec_reasoning()
 
 
-# def set_reasoning(prefix: str = "reasoning", suffix: str = "necessary",
-#                   selection: bool = True,
-#                   var_name: str = "user_nec_reasons_entered"):
-#     """
-#     This function sets the var_name to True by capturing the reasoning 
-#     for specified combination of prefix and suffix.
-#     """
-#     # Captured the reasoning for the selected options
-#     for key, value in st.session_state.items():
-#         if key.startswith(f"{prefix}_") and key.endswith(f"_{suffix}"):
-#             key_part = key.split("_")[1]
-#             st.session_state.survey_info[key_part]["reasoning"] = value
-#             st.session_state.survey_info[key_part]["selected"] = selection
-#     st.session_state[var_name] = True
+def set_reasoning(prefix: str = "reasoning", suffix: str = "necessary",
+                  selection: bool = True,
+                  var_name: str = "user_nec_reasons_entered"):
+    """
+    This function sets the var_name to True by capturing the reasoning 
+    for specified combination of prefix and suffix.
+    """
+    # Captured the reasoning for the selected options
+    for key, value in st.session_state.items():
+        if key.startswith(f"{prefix}_") and key.endswith(f"_{suffix}"):
+            key_part = key.split("_")[1]
+            st.session_state.survey_info[key_part]["reasoning"] = value
+            st.session_state.survey_info[key_part]["selected"] = selection
+    st.session_state[var_name] = True
 
 
 def set_user_nec_reasoning():
@@ -448,6 +485,7 @@ def navigate_to_next_page():
     st.session_state.user_selections_fixed = True
     st.session_state.user_unnec_reasons_entered = True
     st.session_state.user_nec_reasons_entered = True
+    st.rerun()
 
 
 def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary",

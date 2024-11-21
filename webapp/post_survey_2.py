@@ -62,8 +62,3 @@ def post_survey_two():
 
     load_survey_info()
     get_user_selections()
-
-    # if st.session_state.get("survey_2_completed", False):
-    #     st.success("Survey Part 2 has been completed.")
-    #     st.rerun()
-    # st.rerun()

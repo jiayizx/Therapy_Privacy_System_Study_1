@@ -27,6 +27,5 @@ def main():
     elif 'survey_3_completed' not in st.session_state:
         post_survey_three()
 
-
 if __name__ == "__main__":
     main()

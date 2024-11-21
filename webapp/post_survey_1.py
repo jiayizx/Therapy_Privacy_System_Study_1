@@ -54,6 +54,13 @@ def streamlit_cnfg():
             .stRadio > div[role="radiogroup"] {{
                 flex-direction: row !important;
             }}
+
+            /* Style for the custom header */
+            .custom-header {{
+                font-size: {HEADER_SIZE}px;
+                font-weight: bold;
+                margin-bottom: 1.5em;
+            }}
         </style>
         """, unsafe_allow_html=True)
 
@@ -126,7 +133,7 @@ def post_survey_one():
             question_key = f"Q{i}"  # Unique key for each question
             # Render the selectbox and update the session state on change
             st.session_state.survey_response[question_key] = st.radio(
-                label=f"Q{i}: {statement}",
+                label=f"**Q{i}: {statement}**",
                 options=response_options,
                 index=response_options.index(st.session_state.survey_response[question_key]),
                 key=question_key,  # Use unique keys for each selectbox
