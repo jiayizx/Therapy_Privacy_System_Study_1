@@ -7,6 +7,10 @@ from firebase_admin import firestore
 import time
 import logging
 
+HEADER_SIZE = 24
+LABEL_SIZE = 70
+OPTION_SIZE = 14
+
 # Assuming Firebase setup has already been initialized
 
 def save_survey_response_to_firebase(prolific_id, survey_data):
@@ -33,9 +37,31 @@ def save_survey_response_to_firebase(prolific_id, survey_data):
         logging.error(f"Failed to save survey response to Firebase Firestore: {e}")
 
 
+def streamlit_cnfg():
+    st.markdown(f"""
+        <style>
+            /* Style for radio button label (question) */
+            .stRadio > div:first-child > label {{
+                font-size: {LABEL_SIZE}px !important;
+            }}
+            
+            /* Style for radio button options */
+            .stRadio > div[role="radiogroup"] label {{
+                font-size: {OPTION_SIZE}px !important;
+            }}
+
+            /* Ensure horizontal layout */
+            .stRadio > div[role="radiogroup"] {{
+                flex-direction: row !important;
+            }}
+        </style>
+        """, unsafe_allow_html=True)
+
 def post_survey_one():
-    st.write("### Survey Part 1: How's your experience with the AI chatbot?")
-    st.write("Here are some experience-related statements. To what extent do you agree or disagree with each statement?")
+
+    streamlit_cnfg()
+    # st.write("### Survey Part 1: How's your experience with the AI chatbot?")
+    st.write("<p class = 'custom-header'>Here are some experience-related statements. To what extent do you agree or disagree with each statement? </p>", unsafe_allow_html=True)
 
     # Ensure Prolific ID is available
     if 'prolific_id' not in st.session_state or st.session_state.prolific_id == '':
@@ -49,39 +75,40 @@ def post_survey_one():
     
     # Survey statements
     statements = [
-        "I trust this AI chatbot to be reliable.",
-        "I do not feel totally safe providing personal private information over this chatbot.",
-        "I think this AI chatbot is persuasive.",
-        "I enjoyed the therapy session.",
-        "This chatbot demonstrates empathy during interactions.",
-        "I feel understood when I talk to this chatbot.",
-        "The AI chatbot's responses are appropriate for my needs.",
-        "I am comfortable using this chatbot for sensitive discussions.",
-        "This chatbot respects my privacy.",
-        "I believe the chatbot provides helpful recommendations.",
-        "I feel the chatbot has a human-like understanding of my concerns."
-        "I enjoyed the therapy session.",
-        "I trust this AI chatbot to be reliable.",
-        "I think this AI chatbot is persuasive.",
-        "I do not feel totally safe providing personal private information over this chatbot.",
-        "I can understand what Alex was going through recently.",
-        "I recognize Alex's situation.",
-        "I can see Alex's point of view.",
-        "Alex's reactions to the situation are understandable.",
-        "Alex's emotions are genuine.",
-        "I was in a similar emotional state as Alex when chatting with the AI therapist.",
-        "I experienced the same emotions as Alex when chatting with the AI therapist.",
-        "I can feel Alex's emotions."
+        "I trust this AI chatbot to be reliable",
+        "I do not feel totally safe providing personal private information over this chatbot",
+        "I think this AI chatbot is persuasive",
+        "I enjoyed the therapy session",
+
+        "I can understand what Alex was going through recently",
+        "I recognize Alex's situation",
+        "I can see Alex's point of view",
+        "Alex's reactions to the situation are understandable",
+
+        "Alex's emotions are genuine",
+        "I was in a similar emotional state as Alex when chating with the AI therapist",
+        "I experienced the same emotions as Alex when chating with the AI therapist",
+        "I can feel Alex's emotions",
+
+        # "After going through Alex's profile and chatting with AI therapist, I was fully absorbed",
+        # "I can relate to what Alex was going through",
+        # "I can identify with the Alex's situation",
+        # "I can identify with Alex"
     ]
 
     # Add a placeholder option at the beginning
     response_options = [
         "Select an option",  # Placeholder
-        "Disagree",
-        "Slightly Disagree",
-        "Neutral",
-        "Slightly Agree",
-        "Agree",
+        # "Disagree",
+        # "Slightly Disagree",
+        # "Neutral",
+        # "Slightly Agree",
+        # "Agree",
+        "not at all",
+        "slightly",
+        "somewhat",
+        "mostly",
+        "completely"
     ]
 
     # Initialize survey responses in session state if not already present
@@ -98,11 +125,12 @@ def post_survey_one():
         for i, statement in enumerate(statements, 1):
             question_key = f"Q{i}"  # Unique key for each question
             # Render the selectbox and update the session state on change
-            st.session_state.survey_response[question_key] = st.selectbox(
-                label=f"**Q{i}: {statement}**",
+            st.session_state.survey_response[question_key] = st.radio(
+                label=f"Q{i}: {statement}",
                 options=response_options,
                 index=response_options.index(st.session_state.survey_response[question_key]),
-                key=question_key  # Use unique keys for each selectbox
+                key=question_key,  # Use unique keys for each selectbox
+                horizontal=True
             )
 
         # Submit button to save responses

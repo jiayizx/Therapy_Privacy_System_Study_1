@@ -40,6 +40,7 @@ def get_survey_sample(all_detections:dict, max_display:int = 10):
                 samples += 1
     return sampled_detections
 
+
 def disable_copy_paste():
     # Inject both JavaScript and CSS using a single HTML component
     # Add custom JavaScript to prevent cut/copy/paste
@@ -205,6 +206,9 @@ def setup_survey_config():
 
     if "user_unnec_reasons_entered" not in st.session_state:
         st.session_state.user_unnec_reasons_entered = False
+    
+    if "survey_2_completed" not in st.session_state:
+        st.session_state.survey_2_completed = False
 
     # Store the user selections and non-selections
     if "user_selections" not in st.session_state:
@@ -221,17 +225,15 @@ def get_user_selections():
         # Filter out the user messages from the chat history
         st.session_state.user_conversation = "\n".join([message["response"] for message in st.session_state.messages
                      if message["turn"] == "user"])
+        logging.info("User conversation: %s", st.session_state.user_conversation)
 
-    user_conversation = st.session_state.user_conversation
-
-    logging.info("User conversation: %s", user_conversation)
-    logging.info("Getting detections from user conversation")
-
+    # If complete detections are not obtained in the daemon mode, enforce the user to wait
     if "complete_detections" not in st.session_state:
+        logging.info("Forcing to get detections from user conversation")
         with st.spinner("Analyzing conversation..."):
             complete_detections = get_survey_info()
         logging.info("Obtained gpt detections from user conversation")
-        # logging.info("Complete Detections : %s", complete_detections)
+        logging.info("Complete Detections : %s", complete_detections)
         st.session_state.complete_detections = complete_detections
 
     # Get the survey info from user conversation if not already obtained
@@ -249,11 +251,12 @@ def get_user_selections():
     if not st.session_state.user_selections_fixed:
         # Display the survey information to the user for getting the user selections
         if survey_info == {}:
-            st.write("Successfully analyzed conversation.")
-            st.session_state.user_selections_fixed = True
-            st.session_state.user_nec_reasons_entered = True
-            st.session_state.user_unnec_reasons_entered = True
-            st.session_state.disable_submit = False
+            # Skip the survey as there are no detections
+            navigate_to_next_page()
+            # st.write("Successfully analyzed conversation.")
+            # st.session_state.disable_submit = False
+            # return None
+
         else:
             logging.info("Surveying user, waiting for user to complete selections.")
 
@@ -272,23 +275,31 @@ def get_user_selections():
 
                 st.checkbox(f"{value['survey_display']}", key=f"checkbox_{key}", value=False)
             # Display button to fix the user selections to proceed to the next step and prevent change
-            st.button("Next", on_click=fix_user_selections)
-
-    # User selections are fixed, proceed to the next step
-    if st.session_state.user_selections_fixed and not st.session_state.user_nec_reasons_entered:
-        get_necessary_reasoning()
+            st.button("Next", on_click=fix_user_selections, key="fix_selections_next_button",)
+    logging.info("User selections fixed: %s", st.session_state.user_selections_fixed)
     
-    if st.session_state.user_selections_fixed and st.session_state.user_nec_reasons_entered and not st.session_state.user_unnec_reasons_entered:
+    # User selections are fixed, proceed to the next step
+    if (st.session_state.user_selections_fixed
+        and not st.session_state.user_nec_reasons_entered):
+        get_necessary_reasoning()
+
+    if (st.session_state.user_selections_fixed
+        and st.session_state.user_nec_reasons_entered
+        and not st.session_state.user_unnec_reasons_entered):
         get_unnecessary_reasoning()
 
-    if st.session_state.user_selections_fixed and st.session_state.user_nec_reasons_entered and st.session_state.user_unnec_reasons_entered:
+    if (st.session_state.user_selections_fixed
+        and st.session_state.user_nec_reasons_entered
+        and st.session_state.user_unnec_reasons_entered):
+        # Not required to display the submit button as the user can directly proceed to the next page
         display_submit_button()
+        # navigate_to_next_page()
+    # st.rerun()
 
 def fix_user_selections():
     """
     This function fixes the user selections made in the survey.
     """
-    st.session_state.user_selections_fixed = True # Do not display the selections again
     st.session_state.disable_user_selections = True # Disable the user selections
 
     # Store the user's selected options into st.session_state memory
@@ -304,6 +315,7 @@ def fix_user_selections():
     logging.info("Captured User selection into selected and unselected as %s, %s",
                  st.session_state.user_selections,
                  st.session_state.user_non_selections)
+    st.session_state.user_selections_fixed = True # Do not display the selections again
 
 
 def get_necessary_reasoning():
@@ -325,37 +337,56 @@ def get_necessary_reasoning():
                                 height=120)
 
         validate_reasoning(prefix="reasoning", suffix="necessary", var_name="disable_necessary_reasons")
-        st.button("Next", on_click=set_user_nec_reasoning, disabled=st.session_state.disable_necessary_reasons,
-                        help=f"Provide reasoning for :red[all with at-least {MIN_WORDS} words] to proceed to next step.",
-                        key="next_button")
-    else:
-        set_user_nec_reasoning()
+        st.button("Next", on_click=set_user_nec_reasoning(),
+                  disabled=st.session_state.disable_necessary_reasons,
+                  help=f"Provide reasoning for :red[all with at-least {MIN_WORDS} words] to proceed to next step.",
+                  key="next_button")
+    # else:
+        # set_reasoning("reasoning", "necessary", True, "user_nec_reasons_entered")
+        # set_user_nec_reasoning()
+
+
+# def set_reasoning(prefix: str = "reasoning", suffix: str = "necessary",
+#                   selection: bool = True,
+#                   var_name: str = "user_nec_reasons_entered"):
+#     """
+#     This function sets the var_name to True by capturing the reasoning 
+#     for specified combination of prefix and suffix.
+#     """
+#     # Captured the reasoning for the selected options
+#     for key, value in st.session_state.items():
+#         if key.startswith(f"{prefix}_") and key.endswith(f"_{suffix}"):
+#             key_part = key.split("_")[1]
+#             st.session_state.survey_info[key_part]["reasoning"] = value
+#             st.session_state.survey_info[key_part]["selected"] = selection
+#     st.session_state[var_name] = True
 
 
 def set_user_nec_reasoning():
     """
-    This function sets the user_nec_reasons_entered to True after the user provides reasoning for the selected options.
+    This function sets the user_nec_reasons_entered to True after the user 
+    provides reasoning for the selected options.
     """
-    st.session_state.user_nec_reasons_entered = True
-
     # Captured the reasoning for the selected options
     for key, value in st.session_state.items():
         if key.startswith("reasoning_") and key.endswith("_necessary"):
             key_part = key.split("_")[1]
             st.session_state.survey_info[key_part]["reasoning"] = value
-
+            st.session_state.survey_info[key_part]["selected"] = True
+    st.session_state.user_nec_reasons_entered = True
 
 def set_user_unnec_reasoning():
     """
-    This function sets the user_nec_reasons_entered to True after the user provides reasoning for the selected options.
+    This function sets the user_nec_reasons_entered to True after the user provides 
+    reasoning for the un-selected options.
     """
-    st.session_state.user_unnec_reasons_entered = True
-
     # Captured the reasoning for the selected options
     for key, value in st.session_state.items():
         if key.startswith("reasoning_") and key.endswith("_unnecessary"):
             key_part = key.split("_")[1]
             st.session_state.survey_info[key_part]["reasoning"] = value
+            st.session_state.survey_info[key_part]["selected"] = True
+    st.session_state.user_unnec_reasons_entered = True
 
 
 def get_unnecessary_reasoning():
@@ -377,30 +408,46 @@ def get_unnecessary_reasoning():
                 # Display the information in the first column
                 col1.write(st.session_state.survey_info[key]["survey_display"])
                 # Commented out for now as the See in chat is not optimal for the user
-                # with col1.expander("See in chat"):
-                #     st.write(f":grey[{st.session_state.survey_info[key]['revealation']}]")
+                with col1.expander("See in chat"):
+                    st.write(f":grey[{st.session_state.survey_info[key]['revealation']}]")
 
                 # Display the reasoning text area in the second column
                 with col2:
                     _ = col2.text_area("_", key=f"reasoning_{key}_unnecessary", label_visibility="collapsed")
 
         validate_reasoning(prefix="reasoning", suffix="unnecessary", var_name="disable_unnecessary_reasons")
-        st.button("Next", on_click=set_user_unnec_reasoning, disabled=st.session_state.disable_unnecessary_reasons,
-                        help=f"Provide reasoning for :red[all with at-least {MIN_WORDS} words] to proceed to next step.")
+        st.button("Next", on_click=set_user_unnec_reasoning,
+                  disabled=st.session_state.disable_unnecessary_reasons,
+                  help=f"Provide reasoning for :red[all with at-least {MIN_WORDS} words] to proceed to next step.")
     else:
+        # set_reasoning("reasoning", "unnecessary", False, "user_unnec_reasons_entered")
         set_user_unnec_reasoning()
 
 
 def display_submit_button():
     """Enables the submit button after the user provides reasoning for the selected and non-selected options."""
+    # st.switch_page("Post Survey 3")
     st.session_state.user_unnec_reasons_entered = True
     st.session_state.user_nec_reasons_entered = True
     st.session_state.disable_submit = False
 
-    st.write("Succesfully completed Post Survey 2")
-    if st.button("Part 3: Proceed to Post Survey 3", on_click=store_feedback,
+    # st.write("Succesfully completed Post Survey 2")
+    if st.button("Next", on_click=navigate_to_next_page,
                      disabled=st.session_state.disable_submit):
         st.session_state.survey_2_completed = True
+
+
+def navigate_to_next_page():
+    """
+    This function navigates the user to the next page after the survey is completed.
+    """
+    # Store the feedback in firecase and set the survey_2_completed to True
+    store_feedback()
+    st.session_state.survey_2_completed = True
+    # Set the other flags to True
+    st.session_state.user_selections_fixed = True
+    st.session_state.user_unnec_reasons_entered = True
+    st.session_state.user_nec_reasons_entered = True
 
 
 def validate_reasoning(prefix: str = "reasoning", suffix: str = "necessary",
@@ -431,26 +478,18 @@ def store_feedback():
     # Add the user conversation and chat history to the storage
     feedback["user_conversation"] = st.session_state.get('user_conversation', [])
     feedback['messages'] = st.session_state.get('messages', [])
-
-    # In survey info, capture the reasoning for the selected and non-selected options
-    for key, value in st.session_state.items():
-        if key.startswith("reasoning_"):
-            key_part = key.split("_")[1]
-            if key_part in st.session_state.survey_info:
-                st.session_state.survey_info[key_part]["reasoning"] = value
-                st.session_state.survey_info[key_part]["selected"] = (
-                    "necessary" if key_part in st.session_state.get('user_selections', []) else "unnecessary"
-                )
-
-    # Add the survey information to the feedback
-    feedback["survey_info"] = st.session_state.get('survey_info', {})
+    feedback['complete_detections'] = st.session_state.get('complete_detections', {})
+    feedback['user_selections'] = st.session_state.get('user_selections', [])
+    feedback['survey_info'] = st.session_state.get('survey_info', {})
+    
+    # Prolific ID
     prolific_id = st.session_state.get('prolific_id', 'unknown')
     feedback["prolific_id"] = prolific_id
 
     # Log the user feedback
-    logging.info("*=*"*50)
+    logging.info("=" * 50)
     logging.info("User feedback: %s", feedback)
-    logging.info("*=*"*50)
+    logging.info("=" * 50)
 
     # Dump user feedback to a text file with timestamp reference
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

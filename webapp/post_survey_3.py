@@ -25,13 +25,23 @@ def save_survey_two_response_to_firebase(prolific_id, responses):
     try:
         # Save the survey document to the Firestore collection named "survey_two_responses"
         db.collection("group_one_survey_three_responses").document(document_name).set(survey_document)
-        logging.info("Survey Part 2 response successfully saved to Firebase Firestore.")
+        logging.info("Survey Part 3 response successfully saved to Firebase Firestore.")
     except Exception as e:
         logging.error(f"Failed to save Survey Part 2 response to Firebase Firestore: {e}")
 
 
+def close_and_redirect():
+    js = """
+        <script>
+            window.location.href = 'https://app.prolific.co/submissions/complete?cc=CWU9VX3E';
+            window.close();
+        </script>
+    """
+    st.components.v1.html(js)
+
+
 def post_survey_three():
-    st.write("### Post Survey Part 3")
+    # st.write("### Post Survey Part 3: Demographic Information")
 
     if 'survey_2_completed' not in st.session_state:
         st.warning("Please complete the second part of the survey.")
@@ -113,7 +123,7 @@ def post_survey_three():
         "I've neither used an AI chatbot nor been to therapy",
     ]
 
-    prior_experience = st.radio(
+    prior_experience = st.selectbox(
         "Select your prior experience with AI chatbot or therapy:",
         options=prior_experience_options,
         index=prior_experience_options.index(st.session_state.prior_experience) if st.session_state.prior_experience in prior_experience_options else 0,
@@ -131,6 +141,8 @@ def post_survey_three():
             st.error("Please select your gender identity.")
         elif highest_education == "Select your highest education":
             st.error("Please select your highest level of education.")
+        elif prior_experience == "Select an option":
+            st.error("Please select your prior experience with AI chatbot or therapy.")
         else:
             # Collect all responses
             responses = {
@@ -150,10 +162,11 @@ def post_survey_three():
             st.session_state.survey_submitted = True
             st.session_state.survey_3_completed = True
 
-    if st.session_state.get("survey_3_completed", False):
-        st.write("Thank you for your participation! You can proceed to Profolio:")
-        st.markdown("[Complete Submission](https://app.prolific.com/submissions/complete?cc=CWU9VX3E)")
+            # Close the current tab after 5 seconds
+            close_and_redirect()
 
     # Optional: Display a message if the survey is already completed
     if 'survey_submitted' in st.session_state and st.session_state.survey_submitted:
-        st.write("You have already completed all the survey. Thank you!")
+        st.write("You have already completed all the survey. Thank you for your participation!")
+        st.link_button("Return to Prolific", "https://app.prolific.co/submissions/complete?cc=CWU9VX3E")
+        close_and_redirect()

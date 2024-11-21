@@ -16,7 +16,8 @@ def main():
         st.stop()
 
     # Preload the survey for the second part of the survey
-    prep_survey_two()
+    if not st.session_state.get("prep_done", False):
+        prep_survey_two()
 
     # Check if the first survey is completed
     if 'survey_1_completed' not in st.session_state:
@@ -25,7 +26,7 @@ def main():
         post_survey_two()
     elif 'survey_3_completed' not in st.session_state:
         post_survey_three()
-    
+
 
 if __name__ == "__main__":
     main()
