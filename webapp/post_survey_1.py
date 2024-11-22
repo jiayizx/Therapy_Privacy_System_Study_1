@@ -38,6 +38,9 @@ def save_survey_response_to_firebase(prolific_id, survey_data):
 
 
 def streamlit_cnfg():
+    """
+    Configure Streamlit settings for the survey. 
+    """
     st.markdown(f"""
         <style>
             /* Style for radio button label (question) */
@@ -64,25 +67,18 @@ def streamlit_cnfg():
         </style>
         """, unsafe_allow_html=True)
 
-def post_survey_one():
 
-    streamlit_cnfg()
-    # st.write("### Survey Part 1: How's your experience with the AI chatbot?")
+def survey_questions_options():
+    """
+    Function for the survey questions and options for the survey
+    Returns agree_disagree_sts, agree_disagree_options, true_untrue_sts, true_untrue_options
+    """
 
-    # Ensure Prolific ID is available
-    if 'prolific_id' not in st.session_state or st.session_state.prolific_id == '':
-        st.warning("Please go back to the main page and enter your Prolific ID.")
-        st.stop()
-
-    if st.session_state.phase != "post_survey":
-        st.warning("Please complete the chat session before proceeding to the survey.")
-        st.stop()
-
-    # Add a placeholder option at the beginning
     agree_disagree_sts = ["I trust this AI chatbot to be reliable",
                           "I do not feel totally safe providing personal private information over this chatbot",
                           "I think this AI chatbot is persuasive",
                           "I enjoyed the therapy session"]
+    # Add a placeholder option at the beginning
     agree_disagree_options = ["Select an option", "disagree", "slightly disagree",
                               "neutral", "slightly agree", "agree"]
 
@@ -100,8 +96,28 @@ def post_survey_one():
                         "Even though Alex's life experiences are different to mine, I can really see things from his/her perspective",
                         "I am sure that I know how Alex was feeling",
                         "I feel confident that I could accurately describe how Alex felt"]
+    # Add a placeholder option at the beginning
     true_untrue_options = ["Select an option", "completely untrue",
                               "mostly untrue", "neutral", "mostly true", "completely true"]
+
+    return agree_disagree_sts, agree_disagree_options, true_untrue_sts, true_untrue_options
+
+def post_survey_one():
+
+    streamlit_cnfg()
+    # st.write("### Survey Part 1: How's your experience with the AI chatbot?")
+
+    # Ensure Prolific ID is available
+    if 'prolific_id' not in st.session_state or st.session_state.prolific_id == '':
+        st.warning("Please go back to the main page and enter your Prolific ID.")
+        st.stop()
+
+    if st.session_state.phase != "post_survey":
+        st.warning("Please complete the chat session before proceeding to the survey.")
+        st.stop()
+
+    # Add a placeholder option at the beginning
+    agree_disagree_sts, agree_disagree_options, true_untrue_sts, true_untrue_options = survey_questions_options()
 
     # Initialize survey responses in session state if not already present
     if "survey_response" not in st.session_state:
