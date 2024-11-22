@@ -391,7 +391,7 @@ def main():
 
     elif st.session_state.phase == "chat" or st.session_state.phase == "post_survey":
         # Disable the copy-paste functionality
-        disable_copy_paste()
+        disable_copy_paste() # Debug
         # Place two images in like click to reveal the information # Half width for each image side by side
         header = st.container()
         header.image("webapp/assets/instruction.png", use_container_width=True)
