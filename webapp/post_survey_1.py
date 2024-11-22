@@ -83,8 +83,8 @@ def post_survey_one():
                           "I do not feel totally safe providing personal private information over this chatbot",
                           "I think this AI chatbot is persuasive",
                           "I enjoyed the therapy session"]
-    agree_disagree_options = ["Select an option", "slightly disagree", 
-                              "disagree", "neutral", "slightly agree", "agree"]
+    agree_disagree_options = ["Select an option", "disagree", "slightly disagree",
+                              "neutral", "slightly agree", "agree"]
 
     true_untrue_sts = ["I found that Alex's condition affected my mood",
                         "I was very affected by the emotions in Alex's story",
