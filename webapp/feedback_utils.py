@@ -64,36 +64,61 @@ def disable_copy_paste():
         </style>
         
         <script>
-            // Function to disable copy/paste events
-            function disableCopyPaste() {
-                const textareas = parent.document.querySelectorAll('.stTextArea textarea');
-                textareas.forEach(textarea => {
-                    textarea.addEventListener('copy', e => e.preventDefault());
-                    textarea.addEventListener('cut', e => e.preventDefault());
-                    textarea.addEventListener('paste', e => e.preventDefault());
-                    textarea.addEventListener('contextmenu', e => e.preventDefault());
-                    
-                    // Disable keyboard shortcuts
-                    textarea.addEventListener('keydown', e => {
-                        if ((e.ctrlKey || e.metaKey) && 
-                            (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
-                            e.preventDefault();
-                        }
-                    });
-                });
-            }
+    // Function to disable copy/paste events for text inputs
+    function disableCopyPasteForTextInputs() {
+        const textInputs = parent.document.querySelectorAll('.stTextInput input');
+        textInputs.forEach(input => {
+            input.addEventListener('copy', e => e.preventDefault());
+            input.addEventListener('cut', e => e.preventDefault());
+            input.addEventListener('paste', e => e.preventDefault());
+            input.addEventListener('contextmenu', e => e.preventDefault());
             
-            // Run immediately and also after a short delay to ensure elements are loaded
-            disableCopyPaste();
-            setTimeout(disableCopyPaste, 500);
-            
-            // Monitor for dynamic changes
-            const observer = new MutationObserver(disableCopyPaste);
-            observer.observe(parent.document.body, {
-                childList: true,
-                subtree: true
+            // Disable keyboard shortcuts
+            input.addEventListener('keydown', e => {
+                if ((e.ctrlKey || e.metaKey) && 
+                    (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+                        e.preventDefault();
+                }
             });
-        </script>
+        });
+    }
+
+    // Function to disable copy/paste events for text areas
+    function disableCopyPasteForTextAreas() {
+        const textareas = parent.document.querySelectorAll('.stTextArea textarea');
+        textareas.forEach(textarea => {
+            textarea.addEventListener('copy', e => e.preventDefault());
+            textarea.addEventListener('cut', e => e.preventDefault());
+            textarea.addEventListener('paste', e => e.preventDefault());
+            textarea.addEventListener('contextmenu', e => e.preventDefault());
+            
+            // Disable keyboard shortcuts
+            textarea.addEventListener('keydown', e => {
+                if ((e.ctrlKey || e.metaKey) && 
+                    (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+                        e.preventDefault();
+                }
+            });
+        });
+    }
+
+    // Function to apply both disabling functions
+    function applyAllDisableCopyPaste() {
+        disableCopyPasteForTextInputs();
+        disableCopyPasteForTextAreas();
+    }
+
+    // Run immediately and also after a short delay to ensure elements are loaded
+    applyAllDisableCopyPaste();
+    setTimeout(applyAllDisableCopyPaste, 500);
+
+    // Monitor for dynamic changes
+    const observer = new MutationObserver(applyAllDisableCopyPaste);
+    observer.observe(parent.document.body, {
+        childList: true,
+        subtree: true
+    });
+</script>
     """, height=0)
 
     st.markdown("""
