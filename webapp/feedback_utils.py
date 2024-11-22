@@ -242,7 +242,7 @@ def get_survey_info():
     gpt_response = generate_response(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
-        model="gpt-4o-mini",
+        model="gpt-4o",
         max_tokens=2000,
         temperature=0
     )

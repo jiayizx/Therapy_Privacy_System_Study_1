@@ -84,7 +84,7 @@ def gpt4_search_persona(query, persona_data):
     detected_groups = generate_response(
         system_prompt="You are a smart assistant that can match user queries to relevant persona details.",
         user_prompt=prompt,
-        model="gpt-4o-mini",
+        model="gpt-4o",
         max_tokens=150,
         temperature=0
     )

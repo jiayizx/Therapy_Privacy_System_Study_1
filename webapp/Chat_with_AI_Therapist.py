@@ -227,7 +227,7 @@ def retrieve_persona_details(formatted_query, persona_hierarchy_info, main_categ
             generated_info = generate_response(
                 system_prompt=example_system_prompt,
                 user_prompt="Generate relevant persona information for the recent chat history",
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 max_tokens=100,
                 temperature=0
             )
@@ -351,7 +351,7 @@ def main():
     initialize_session_state()
     setup_logging()
     load_environment_variables()
-    setup_firebase() # Debug
+    # setup_firebase() # Debug
     main_categories, persona_category_info, persona_hierarchy_info = read_persona_csv(PERSONA_FILENAME)
     read_unnecessary_info_csv(UNN_INFO_FNAME)
 
@@ -364,7 +364,7 @@ def main():
     agent_1 = "gpt-4o"
     agent_2 = "Human"
     event = "Therapy"
-    min_interactions = 20 # 20 interactions, 10 turns # Debug
+    min_interactions = 2 # 20 interactions, 10 turns # Debug
     max_iteractions = 40 # 40 interactions, 20 turns
     min_interaction_time = 540 # seconds, 10 min
     words_limit = 100
@@ -391,7 +391,7 @@ def main():
 
     elif st.session_state.phase == "chat" or st.session_state.phase == "post_survey":
         # Disable the copy-paste functionality
-        disable_copy_paste() # Debug
+        # disable_copy_paste() # Debug
         # Place two images in like click to reveal the information # Half width for each image side by side
         header = st.container()
         header.image("webapp/assets/instruction.png", use_container_width=True)
@@ -435,7 +435,7 @@ def main():
                     if st.session_state.chat_finished:
                         st.session_state.phase = "post_survey"
                         chat_history = env.log_state()
-                        save_chat_history_to_firebase(st.session_state.prolific_id, chat_history) # Debug
+                        # save_chat_history_to_firebase(st.session_state.prolific_id, chat_history) # Debug
                         target_page = "pages/Survey.py"
                         st.switch_page(target_page)
                         # st.rerun()  # Trigger rerun to refresh UI
