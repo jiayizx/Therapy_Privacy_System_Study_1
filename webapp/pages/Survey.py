@@ -49,8 +49,8 @@ def main():
     else:
         st.write("You have already completed the survey.")
         style_code()
-        if st.button("Back to the Prolific and complete the task!", key="prolific"):
-            close_and_redirect()
+        # if st.button("Back to the Prolific and complete the task!", key="prolific"):
+        close_and_redirect()
 
 if __name__ == "__main__":
     main()

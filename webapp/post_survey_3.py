@@ -44,7 +44,7 @@ def update_selected_options():
 
 def close_and_redirect(url=PROLIFIC_URL):
     """Close the current tab after 5 seconds."""
-    webbrowser.open(url)
+    st.link_button("Back to the Prolific and complete the task!", "https://app.prolific.co/submissions/complete?cc=CWU9VX3E")
 
 
 def post_survey_three():
@@ -169,4 +169,4 @@ def post_survey_three():
 
             # Close the current tab after 5 seconds
             close_and_redirect()
-            st.rerun()
+            # st.rerun()
