@@ -31,7 +31,7 @@ def retrive_all_survey_one():
             # Store each survey response in a separate JSON file
             output_directory = "retrieve_data/data"
             os.makedirs(output_directory, exist_ok=True)
-            with open(os.path.join(output_directory, f"survey__one_response_{prolific_id}.json"), "w") as outfile:
+            with open(os.path.join(output_directory, f"survey_one_response_{prolific_id}.json"), "w") as outfile:
                 json.dump(survey_response, outfile)
                 
         logging.info("All survey responses successfully retrieved and stored locally in separate files.")
