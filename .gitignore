@@ -19,3 +19,4 @@ __pycache__/*
 
 # exclude retrieve_data/data directory
 retrieve_data/data
+analysis/data
